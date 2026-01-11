@@ -1,0 +1,13 @@
+<div style="text-align: center; margin-top: 50px;">
+  <h1>Server Dashboard</h1>
+
+  <div *ngIf="gameStatus">
+    <p><strong>Status:</strong> {{ gameStatus.status }}</p>
+    <p><strong>Message:</strong> {{ gameStatus.message }}</p>
+    <p><strong>Active Projectiles:</strong> {{ gameStatus.activeProjectiles }}</p>
+  </div>
+
+  <div *ngIf="!gameStatus">
+    <p><em>Loading game data...</em></p>
+  </div>
+</div>
