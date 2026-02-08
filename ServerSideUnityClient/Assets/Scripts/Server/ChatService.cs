@@ -9,14 +9,31 @@ namespace Server
 {
     public class ChatService : MonoBehaviour
     {
+        [Header("References")]
+        [SerializeField] ChatGUIHandler chatGUIHandler;
+        
         private ClientWebSocket _currentWebSocket;
-
         private const string URL = "ws://localhost:5235/ws";
 
+        #region  << Unity Functions >>
         private void Start()
         {
             Connect();
+
+            chatGUIHandler.OnMessageReceived += OnChatSubmitted;
         }
+
+        private void OnDestroy()
+        {
+            chatGUIHandler.OnMessageReceived -= OnChatSubmitted;
+        }
+
+        private void OnValidate()
+        {
+            if(!chatGUIHandler)
+                chatGUIHandler = FindFirstObjectByType<ChatGUIHandler>();
+        }
+        #endregion
 
         public async void Connect()
         {
@@ -64,11 +81,24 @@ namespace Server
                 
                 // Log the String Data!
                 string stringText = Encoding.UTF8.GetString(buffer, 0, result.Count);
-                Debug.Log($"Received: {stringText}");
+                //Debug.Log($"Received: {stringText}");
+                chatGUIHandler.AddMessageToChat(stringText);
             }
         }
+        
+        private async void OnChatSubmitted(string message)
+        {
+            // 1. Send to Server (Networking)
+            await SendMessage(message);
 
-        public async Task SendMessage(string message)
+            // 2. Show on my own screen (UI)
+            chatGUIHandler.AddMessageToChat($"You: {message}");
+
+            // 3. Clear the text box (UI)
+            //chatGUIHandler.ClearInput();
+        }
+
+        private async Task SendMessage(string message)
         {
             if (_currentWebSocket.State != WebSocketState.Open)
             {
