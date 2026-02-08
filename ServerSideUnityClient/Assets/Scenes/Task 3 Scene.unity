@@ -148,7 +148,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4aa77ce278fdba74a80452c68b1532a2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Server.ChatService
-  chatGUIHandler: {fileID: 0}
+  chatGUIHandler: {fileID: 416370401}
 --- !u!4 &4782148
 Transform:
   m_ObjectHideFlags: 0
