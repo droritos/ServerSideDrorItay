@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using System.Net.WebSockets;
 using System.Text;
+using System.Collections.Concurrent;
 
 namespace ServerOfGame.Server.Controllers
 {
@@ -10,7 +11,7 @@ namespace ServerOfGame.Server.Controllers
         // 1. A static list to keep track of everyone currently chatting
 
         // We use 'static' so all players share the same list.
-        private static List<WebSocket> _connectedClients = new List<WebSocket>();
+        public static readonly ConcurrentDictionary<WebSocket, string> _connectedClients = new ConcurrentDictionary<WebSocket, string>();
 
         [Route("/ws")] // The address will be ws://localhost:port/ws
         public async Task Get()
@@ -18,11 +19,19 @@ namespace ServerOfGame.Server.Controllers
             // Check: Is this a WebSocket request? (Or just a normal HTTP GET?)
             if (HttpContext.WebSockets.IsWebSocketRequest)
             {
+                // Validate Token
+                var token = HttpContext.Request.Query["access_token"];
+                if(string.IsNullOrEmpty(token))
+                {
+                    HttpContext.Response.StatusCode = 401;
+                    return;
+                }
+
                 // Accept the call!
-                using var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
+                var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
 
                 // Add them to our "Phone Book"
-                _connectedClients.Add(webSocket);
+                _connectedClients.TryAdd(webSocket, token);
                 Console.WriteLine("Someone connected! Total: " + _connectedClients.Count);
 
                 var welcomeMsg = Encoding.UTF8.GetBytes("Welcome to the Chat!");
@@ -45,18 +54,27 @@ namespace ServerOfGame.Server.Controllers
             var buffer = new byte[1024 * 4];
             while (socket.State == WebSocketState.Open)
             {
-
                 var result = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+
 
                 if(result.MessageType == WebSocketMessageType.Text)
                 {
+                    string name = _connectedClients[socket] + ":";
+
+                    string finalString = name + Encoding.UTF8.GetString(buffer, 0, result.Count);
+                    var newBuffer = Encoding.UTF8.GetBytes(finalString);
                     // 3. BROADCAST: Send this message to everyone else!
-                    await BroadcastMessage(buffer, result.Count, socket);
+
+                    await BroadcastMessage(newBuffer, newBuffer.Length, socket);
                 }
                 else if (result.MessageType == WebSocketMessageType.Close)
                 {
                     // 4. Handle Disconnect
-                    _connectedClients.Remove(socket);
+                    _connectedClients.TryRemove(socket, value: out string username);
+                    string exitMsg = "Server: " + username + " disconnected.";
+
+                    var newBuffer = Encoding.UTF8.GetBytes(exitMsg);
+                    await BroadcastMessage(newBuffer, newBuffer.Length, socket);
                     await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closed", CancellationToken.None);
                 }
             }
@@ -72,9 +90,9 @@ namespace ServerOfGame.Server.Controllers
             {
                 // Don't send the message back to the person who sent it!
                 // (Requirement: "broadcasts to all other connected clients (not back to the sender)")
-                if (client != senderSocket && client.State == WebSocketState.Open)
+                if (client.Key != senderSocket && client.Key.State == WebSocketState.Open)
                 {
-                    await client.SendAsync(messageSegment, WebSocketMessageType.Text, true, CancellationToken.None);
+                    await client.Key.SendAsync(messageSegment, WebSocketMessageType.Text, true, CancellationToken.None);
                 }
             }
         }
