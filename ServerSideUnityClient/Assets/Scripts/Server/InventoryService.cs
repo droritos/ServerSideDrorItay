@@ -1,5 +1,5 @@
 using UnityEngine;
-using Data; // Or wherever you put the classes
+using Data; 
 
 namespace Server
 {
@@ -7,17 +7,16 @@ namespace Server
     {
         [SerializeField] ApiClient apiClient;
 
-        // "Action" endpoints usually use POST
+      
         private const string endPoint = "/api/inventory/purchase";
 
         public void PurchaseItem(int id)
         {
-            // 1. Create the request object
+           
             PurchaseRequest request = new PurchaseRequest();
             request.itemID = id;
 
-            // 2. Send the POST request
-            // Server needs to give me back a PurchaseResponse
+            
             StartCoroutine(apiClient.SendRequest<PurchaseResponse>(
                 endPoint,
                 "POST", 

@@ -45,7 +45,7 @@ namespace Server
         {
             _currentWebSocket = new ClientWebSocket();
 
-            // 2. Create the URI
+          
             var finalUrl = $"{URL}?access_token={token}";
             Uri serverUri = new Uri(finalUrl);
 
@@ -53,15 +53,15 @@ namespace Server
 
             try
             {
-                // 3. NOW we connect
+                
                 await _currentWebSocket.ConnectAsync(serverUri, CancellationToken.None);
                 Debug.Log("Connected to Server!");
             
             
-                // 4. (Future Step) Start listening for messages...
+                
                 ReceiveMessages(); 
                 
-                //await SendChatMessage("Hello World! TEST");
+               
                 chatGUIHandler.ChangePanels(true);
             }
             catch (Exception e)
@@ -75,15 +75,15 @@ namespace Server
             {
                 Debug.Log("Disconnecting...");
         
-                // 1. Tell the Server we are leaving
+                
                 await _currentWebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "User Quit", CancellationToken.None);
         
-                // 2. Clear the local variable
+               
                 _currentWebSocket = null;
         
                 Debug.Log("Disconnected.");
                 chatGUIHandler.ChangePanels(false);
-                //chatGUIHandler.ClearChat(); // You might need to add this helper to GUIHandler
+                //chatGUIHandler.ClearChat(); 
             }
         }
         private void TryConnectAgain()
@@ -96,10 +96,10 @@ namespace Server
             
             while (_currentWebSocket.State == WebSocketState.Open)
             {
-                // Wait to get data
+                
                 var result = await _currentWebSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
                 
-                // Safe code against server disconnection
+                
                 if (result.MessageType == WebSocketMessageType.Close)
                 {
                     await _currentWebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Server closed", CancellationToken.None);
@@ -108,7 +108,7 @@ namespace Server
                     break; 
                 }
                 
-                // Log the String Data!
+                
                 string stringText = Encoding.UTF8.GetString(buffer, 0, result.Count);
                 //Debug.Log($"Received: {stringText}");
                 chatGUIHandler.AddMessageToChat(stringText);
@@ -117,14 +117,13 @@ namespace Server
         
         private async void OnChatSubmitted(string message)
         {
-            // 1. Send to Server (Networking)
+          
             await SendChatMessage(message);
 
-            // 2. Show on my own screen (UI)
+          
             chatGUIHandler.AddMessageToChat($"You: {message}");
             
-            // 3. Clear the text box (UI)
-            //chatGUIHandler.ClearInput();
+
         }
 
         private async Task SendChatMessage(string message)

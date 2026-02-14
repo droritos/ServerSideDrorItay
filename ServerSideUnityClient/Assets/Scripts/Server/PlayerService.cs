@@ -30,7 +30,7 @@ namespace Server
         
         public void UpdateProfile(string nameId,int newLevel, int newXp) 
         {
-            // 2. Create the data object we want to send to the server
+            
             PlayerProfile dataToSend = new PlayerProfile
             {
                 username = nameId,
