@@ -15,7 +15,7 @@ namespace ServerOfGame.Server.Controllers
 
         [Route("/ws")] // The address will be ws://localhost:port/ws
         public async Task Get()
-        {
+        {   
             // Check: Is this a WebSocket request? (Or just a normal HTTP GET?)
             if (HttpContext.WebSockets.IsWebSocketRequest)
             {
