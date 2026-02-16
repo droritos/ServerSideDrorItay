@@ -11,7 +11,6 @@ GameObject:
   - component: {fileID: 5428558253160511814}
   - component: {fileID: 276271861474244932}
   - component: {fileID: 3445780328128556486}
-  - component: {fileID: 2289424904390275319}
   m_Layer: 0
   m_Name: Server Test
   m_TagString: Untagged
@@ -63,20 +62,3 @@ MonoBehaviour:
   playerService: {fileID: 0}
   InventoryService: {fileID: 0}
   MatchResultService: {fileID: 0}
---- !u!114 &2289424904390275319
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6317668145872208710}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7438e0b5db6547346b0ddbe345d9d329, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::LoginUIManager
-  authService: {fileID: 0}
-  usernameInput: {fileID: 0}
-  passwordInput: {fileID: 0}
-  loginButton: {fileID: 0}
-  errorText: {fileID: 0}

@@ -18,11 +18,11 @@ namespace Server
         #region  << Unity Functions >>
         private void Start()
         {
-            TryConnectAgain();
+            //TryConnectAgain();
 
             chatGUIHandler.OnMessageReceived += OnChatSubmitted;
             chatGUIHandler.OnDisconnected += Disconnect;
-            chatGUIHandler.OnConnect += TryConnectAgain;
+            //chatGUIHandler.OnConnect += TryConnectAgain;
         }
 
       
@@ -31,7 +31,7 @@ namespace Server
         {
             chatGUIHandler.OnMessageReceived -= OnChatSubmitted;
             chatGUIHandler.OnDisconnected -= Disconnect;
-            chatGUIHandler.OnConnect -= TryConnectAgain;
+            //chatGUIHandler.OnConnect -= TryConnectAgain;
         }
 
         private void OnValidate()
