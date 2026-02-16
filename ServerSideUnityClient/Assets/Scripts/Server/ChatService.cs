@@ -3,6 +3,7 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Scriptable_Objects;
 using UnityEngine;
 
 namespace Server
@@ -11,6 +12,7 @@ namespace Server
     {
         [Header("References")]
         [SerializeField] ChatGUIHandler chatGUIHandler;
+        [SerializeField] ServicesChannel servicesChannel;
         
         private ClientWebSocket _currentWebSocket;
         private const string URL = "ws://localhost:5235/ws";

@@ -52,6 +52,7 @@ namespace Data
         public string Text;
         public InfoPopupType Type;
     }
+    
     public struct PurchaseRequest
     {
         public int itemID;
@@ -92,5 +93,13 @@ namespace Data
         Warning,
         Error
     }
+    
+    public enum AuthenticationType
+    {
+        Login,
+        Register,
+    }
+    public enum ServiceEventType { Connect, Disconnect, Login, Register }
+    
     #endregion
 }

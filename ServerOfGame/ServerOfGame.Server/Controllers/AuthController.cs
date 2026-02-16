@@ -52,7 +52,11 @@ namespace ServerOfGame.Server.Controllers
             _usersDB.Add(newUser);
             SaveUsers();
 
-            return Ok("Registration successful!");
+            return Ok(new
+            {
+                message = "Registration successful!",
+                token = "" // We send an empty token for now so Unity doesn't complain
+            });
         }
 
 

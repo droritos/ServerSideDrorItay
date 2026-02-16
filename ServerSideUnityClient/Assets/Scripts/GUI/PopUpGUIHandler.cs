@@ -22,6 +22,8 @@ public class PopUpGUIHandler : MonoBehaviour
 
     private void Awake()
     {
+        // 👇 ADD THIS! Detach from any parent so we become a "Root" object
+        transform.SetParent(null);
         // Singleton setup
         if (Instance != null && Instance != this)
         {
