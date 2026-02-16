@@ -12,37 +12,40 @@ namespace Server
 {
     public class AuthService : MonoBehaviour
     {
-        #region << Events >>
-        public event UnityAction<string> OnLoginToken 
-        {
-            add    => servicesChannel.Subscribe(ServiceEventType.Login, value);
-            remove => servicesChannel.Unsubscribe(ServiceEventType.Login, value);
-        }
-        public event UnityAction<string> OnRegisterToken
-        {
-            add    => servicesChannel.Subscribe(ServiceEventType.Register, value);
-            remove => servicesChannel.Unsubscribe(ServiceEventType.Register, value);
-        }
-        #endregion
-        
         [Header("References")]
         [SerializeField] ServicesChannel servicesChannel;
         [SerializeField] LoginUIManager loginUIManager;
         
         private const string BaseUrl = "http://localhost:5235/api/auth"; 
         private readonly HttpClient _httpClient = new HttpClient();
-        
-        
-        
+
+        private void Start()
+        {
+            loginUIManager.LoginResponse += Login;
+            loginUIManager.RegisterResponse += Register;
+        }
+
+        private void OnDestroy()
+        {
+            loginUIManager.LoginResponse -= Login;
+            loginUIManager.RegisterResponse -= Register;
+        }
+
+        private void OnValidate()
+        {
+           // if(!servicesChannel)
+           //     servicesChannel = Resources.Load<ServicesChannel>("ServicesEvents");
+            
+            if(!loginUIManager)
+                loginUIManager = FindFirstObjectByType<LoginUIManager>();
+        }
+
         public async void Register(string username, string password)
         {
-            string token = await SendAuthRequest(username, password, "/register");
+            await SendAuthRequest(username, password, "/register");
 
-            if (!string.IsNullOrEmpty(token))
-            {
-                PopUpGUIHandler.Instance.HandlePopupRequest("Register Success!", InfoPopupType.Log);
-                servicesChannel.Raise(ServiceEventType.Register, token);
-            }
+            //PopUpGUIHandler.Instance.HandlePopupRequest("Register Success!", InfoPopupType.Log);
+            servicesChannel.Raise(ServiceEventType.Register);
         }
 
         public async void Login(string username, string password)
@@ -51,7 +54,7 @@ namespace Server
 
             if (!string.IsNullOrEmpty(token))
             {
-                PopUpGUIHandler.Instance.HandlePopupRequest($"Login Success! Token - {token}", InfoPopupType.Log);
+                //PopUpGUIHandler.Instance.HandlePopupRequest($"Login Success! Token - {token}", InfoPopupType.Log);
                 servicesChannel.Raise(ServiceEventType.Login, token);
             }
         }
@@ -72,11 +75,12 @@ namespace Server
                 if (response.IsSuccessStatusCode)
                 {
                     AuthResponse authResponse = JsonUtility.FromJson<AuthResponse>(responseText);
+                    PopUpGUIHandler.Instance.HandlePopupRequest(authResponse.message,InfoPopupType.Log);
                     return authResponse.token;
                 }
                 else
                 {
-                    //Debug.LogError($"Auth Error: {responseText}");
+                    Debug.LogError($"Auth Error: {responseText}");
                     PopUpGUIHandler.Instance.HandlePopupRequest(responseText,InfoPopupType.Error);
                     return null;
                 }

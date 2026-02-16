@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
+using ServerOfGame.Server.Models;
+using System.Collections.Concurrent;
 using System.Net.WebSockets;
 using System.Text;
-using System.Collections.Concurrent;
+using System.Text.Json;
 
 namespace ServerOfGame.Server.Controllers
 {
@@ -30,11 +32,21 @@ namespace ServerOfGame.Server.Controllers
                 // Accept the call!
                 var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
 
-                // Add them to our "Phone Book"
-                _connectedClients.TryAdd(webSocket, token);
-                Console.WriteLine("Someone connected! Total: " + _connectedClients.Count);
+                string displayName = "UnknownUser";
 
-                var welcomeMsg = Encoding.UTF8.GetBytes("Welcome to the Chat!");
+                var allUsers = LoadUsers();
+                var foundUser = allUsers.FirstOrDefault(u => u.Id == token);
+
+                if (foundUser != null)
+                {
+                    displayName = foundUser.Username;
+                }
+
+                // Add them to our "Phone Book"
+                _connectedClients.TryAdd(webSocket, displayName);
+                Console.WriteLine($"{displayName} connected! Total: " + _connectedClients.Count);
+
+                var welcomeMsg = Encoding.UTF8.GetBytes($"{displayName} Welcome to the Chat!");
                 await webSocket.SendAsync(new ArraySegment<byte>(welcomeMsg), WebSocketMessageType.Text, true, CancellationToken.None);
 
                 // Keep the connection open (The Loop)
@@ -59,7 +71,7 @@ namespace ServerOfGame.Server.Controllers
 
                 if(result.MessageType == WebSocketMessageType.Text)
                 {
-                    string name = _connectedClients[socket] + ":";
+                    string name = _connectedClients[socket] + ": ";
 
                     string finalString = name + Encoding.UTF8.GetString(buffer, 0, result.Count);
                     var newBuffer = Encoding.UTF8.GetBytes(finalString);
@@ -97,6 +109,19 @@ namespace ServerOfGame.Server.Controllers
             }
         }
 
-       
+        private List<User> LoadUsers()
+        {
+            var filePath = Path.Combine(Directory.GetCurrentDirectory(), "users.json");
+            if (System.IO.File.Exists(filePath))
+            {
+                try
+                {
+                    string json = System.IO.File.ReadAllText(filePath);
+                    return JsonSerializer.Deserialize<List<User>>(json) ?? new List<User>();
+                }
+                catch { return new List<User>(); }
+            }
+            return new List<User>();
+        }
     }
 }

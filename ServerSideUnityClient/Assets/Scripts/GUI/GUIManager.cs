@@ -14,17 +14,27 @@ namespace GameGUI
 
         private void Awake()
         {
-            //servicesChannel.Subscribe(ServiceEventType.Login);
+            servicesChannel.Subscribe(ServiceEventType.Connect,ConnectToChat);
+            servicesChannel.Subscribe(ServiceEventType.Disconnect,DisconnectFromChat);
         }
 
-        public void HandleMenuFlow()
+        private void OnDestroy()
         {
-            
+            servicesChannel.Unsubscribe(ServiceEventType.Connect,ConnectToChat);
+            servicesChannel.Unsubscribe(ServiceEventType.Disconnect,DisconnectFromChat);
         }
 
-        private void Start()
+        public void ConnectToChat()
         {
-            
+            loginUIManager.gameObject.SetActive(false);
+            chatGUIHandler.gameObject.SetActive(true);
         }
+        public void DisconnectFromChat()
+        {
+            loginUIManager.gameObject.SetActive(true);
+            chatGUIHandler.gameObject.SetActive(false);
+            chatGUIHandler.ClearChatPanel();
+        }
+
     }
 }

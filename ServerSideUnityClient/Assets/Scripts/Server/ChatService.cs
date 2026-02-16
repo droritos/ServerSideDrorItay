@@ -3,6 +3,7 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Data;
 using Scriptable_Objects;
 using UnityEngine;
 
@@ -21,16 +22,15 @@ namespace Server
         private void Start()
         {
             //TryConnectAgain();
-
+            servicesChannel.Subscribe(ServiceEventType.Login,Connect);
             chatGUIHandler.OnMessageReceived += OnChatSubmitted;
             chatGUIHandler.OnDisconnected += Disconnect;
             //chatGUIHandler.OnConnect += TryConnectAgain;
         }
-
-      
-
         private void OnDestroy()
         {
+            servicesChannel.Unsubscribe(ServiceEventType.Login,Connect);
+            
             chatGUIHandler.OnMessageReceived -= OnChatSubmitted;
             chatGUIHandler.OnDisconnected -= Disconnect;
             //chatGUIHandler.OnConnect -= TryConnectAgain;
@@ -46,7 +46,6 @@ namespace Server
         public async void Connect(string token)
         {
             _currentWebSocket = new ClientWebSocket();
-
           
             var finalUrl = $"{URL}?access_token={token}";
             Uri serverUri = new Uri(finalUrl);
@@ -55,42 +54,33 @@ namespace Server
 
             try
             {
-                
                 await _currentWebSocket.ConnectAsync(serverUri, CancellationToken.None);
-                Debug.Log("Connected to Server!");
-            
-            
+                PopUpGUIHandler.Instance.HandlePopupRequest($"Connected to Server! Token-{token}",InfoPopupType.Log);
                 
                 ReceiveMessages(); 
                 
-               
                 chatGUIHandler.ChangePanels(true);
+                servicesChannel.Raise(ServiceEventType.Connect);
             }
             catch (Exception e)
             {
-                Debug.LogError($"Connection Error: {e.Message}");
+                PopUpGUIHandler.Instance.HandlePopupRequest($"Connection Error: {e.Message}",InfoPopupType.Error);
             }
         }
         public async void Disconnect()
         {
             if (_currentWebSocket != null && _currentWebSocket.State == WebSocketState.Open)
             {
-                Debug.Log("Disconnecting...");
-        
-                
+                PopUpGUIHandler.Instance.HandlePopupRequest("Disconnecting...",InfoPopupType.Error);
                 await _currentWebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "User Quit", CancellationToken.None);
-        
                
                 _currentWebSocket = null;
         
-                Debug.Log("Disconnected.");
-                chatGUIHandler.ChangePanels(false);
+                PopUpGUIHandler.Instance.HandlePopupRequest("Disconnected",InfoPopupType.Error);
+                chatGUIHandler.ChangePanels(false); // Should Be Handled with servicesChannel
+                servicesChannel.Raise(ServiceEventType.Disconnect);
                 //chatGUIHandler.ClearChat(); 
             }
-        }
-        private void TryConnectAgain()
-        {
-            Connect(RandomNameTester());
         }
         private async void ReceiveMessages()
         {
@@ -147,7 +137,7 @@ namespace Server
                 CancellationToken.None
             );
             
-//            Debug.Log($"Sent: {message}");
+            Debug.Log($"Sent: {message}");
         }
         
         

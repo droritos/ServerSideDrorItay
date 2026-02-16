@@ -149,6 +149,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Server.ChatService
   chatGUIHandler: {fileID: 416370401}
+  servicesChannel: {fileID: 11400000, guid: 115d0aeb29483444ba1c45d1dcfd2c2f, type: 2}
 --- !u!4 &4782148
 Transform:
   m_ObjectHideFlags: 0
@@ -876,7 +877,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 657550312591244686, guid: 69a131820e5a52c4eb5b0afa67c6f9a4, type: 3}
       propertyPath: m_Enabled
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 657550312591244686, guid: 69a131820e5a52c4eb5b0afa67c6f9a4, type: 3}
       propertyPath: m_fontSize
@@ -888,10 +889,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2137184352927624693, guid: 69a131820e5a52c4eb5b0afa67c6f9a4, type: 3}
       propertyPath: m_Text
-      value: 'Enter Username
-
-
-'
+      value: 
       objectReference: {fileID: 0}
     - target: {fileID: 2137184352927624693, guid: 69a131820e5a52c4eb5b0afa67c6f9a4, type: 3}
       propertyPath: m_GlobalPointSize
@@ -900,6 +898,10 @@ PrefabInstance:
     - target: {fileID: 2385652543513880214, guid: 69a131820e5a52c4eb5b0afa67c6f9a4, type: 3}
       propertyPath: m_Name
       value: LoginRegisterPanel
+      objectReference: {fileID: 0}
+    - target: {fileID: 2385652543513880214, guid: 69a131820e5a52c4eb5b0afa67c6f9a4, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2839994171935919812, guid: 69a131820e5a52c4eb5b0afa67c6f9a4, type: 3}
       propertyPath: m_text
@@ -911,7 +913,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5794106623913427823, guid: 69a131820e5a52c4eb5b0afa67c6f9a4, type: 3}
       propertyPath: m_Enabled
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 5794106623913427823, guid: 69a131820e5a52c4eb5b0afa67c6f9a4, type: 3}
       propertyPath: m_fontSize
@@ -939,9 +941,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7846699129032624202, guid: 69a131820e5a52c4eb5b0afa67c6f9a4, type: 3}
       propertyPath: m_Text
-      value: 'Enter Password
-
-'
+      value: 
       objectReference: {fileID: 0}
     - target: {fileID: 7846699129032624202, guid: 69a131820e5a52c4eb5b0afa67c6f9a4, type: 3}
       propertyPath: m_Interactable
@@ -1494,6 +1494,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 4782147}
     - target: {fileID: 8518524547148807929, guid: abd2a455f62b3034b89e1f79043f4ae6, type: 3}
+      propertyPath: servicesChannel
+      value: 
+      objectReference: {fileID: 11400000, guid: 115d0aeb29483444ba1c45d1dcfd2c2f, type: 2}
+    - target: {fileID: 8518524547148807929, guid: abd2a455f62b3034b89e1f79043f4ae6, type: 3}
       propertyPath: OnLoginSuccess.m_PersistentCalls.m_Calls.Array.size
       value: 2
       objectReference: {fileID: 0}
@@ -1657,6 +1661,7 @@ GameObject:
   - component: {fileID: 903700012}
   - component: {fileID: 903700011}
   - component: {fileID: 903700010}
+  - component: {fileID: 903700014}
   m_Layer: 5
   m_Name: Canvas Manager
   m_TagString: Untagged
@@ -1748,6 +1753,21 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 0}
+--- !u!114 &903700014
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 903700009}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 44e3f15b5a070174286f84cd9bc6d571, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GameGUI.GUIManager
+  loginUIManager: {fileID: 1661788016}
+  chatGUIHandler: {fileID: 416370401}
+  servicesChannel: {fileID: 11400000, guid: 115d0aeb29483444ba1c45d1dcfd2c2f, type: 2}
 --- !u!1 &1002988080
 GameObject:
   m_ObjectHideFlags: 0
