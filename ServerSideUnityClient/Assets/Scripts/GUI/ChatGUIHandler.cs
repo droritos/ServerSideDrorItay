@@ -46,10 +46,18 @@ public class ChatGUIHandler : MonoBehaviour
         textObject.SetText(text);
     }
 
-    public void ChangePanels(bool connected)
+    public void ChangePanels(bool connected) // // Should Be Handled with servicesChannel instead
     {
         chatRoomPanel.gameObject.SetActive(connected);
         disconnectedPanel.gameObject.SetActive(!connected);
+    }
+
+    public void ClearChatPanel()
+    {
+        foreach (Transform child in chatPanel)
+        {
+            Destroy(child.gameObject);
+        }
     }
     #region << Button Events >>  
 

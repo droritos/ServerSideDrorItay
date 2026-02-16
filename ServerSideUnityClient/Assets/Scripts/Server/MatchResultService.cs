@@ -21,9 +21,9 @@ namespace Server
 
          StartCoroutine(
             apiClient.SendRequest<SubmitResponse>(sumbitEndPoint, GlobalData.POST, result,
-               (apiResult) => // Renamed 'result' to 'apiResult' to avoid confusion
+               (apiResult) => 
                {
-                  // Now we check apiResult.Data.success
+                 
                   if (apiResult.IsSuccess && apiResult.Data.success)
                   {
                      Debug.Log($"<color=green>Match Submitted!</color>");

@@ -197,7 +197,7 @@ namespace TMPro.Examples
                 // Draw text labels for metrics
                if (m_HandleSize < 0.5f)
                {
-                   GUIStyle style = new GUIStyle(GUI.skin.GetStyle("Label"));
+                   GUIStyle style = new GUIStyle(UnityEngine.GUI.skin.GetStyle("Label"));
                    style.normal.textColor = new Color(0.6f, 0.6f, 0.6f, 1.0f);
                    style.fontSize = 12;
                    style.fixedWidth = 200;

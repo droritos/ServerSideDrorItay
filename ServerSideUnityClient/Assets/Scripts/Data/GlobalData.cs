@@ -28,21 +28,31 @@ namespace Data
             this.password = password;
         }
     }
-    
     [System.Serializable]
-    public struct LoginResponse
+    public class AuthRequest
     {
-        public string token;   // Must match the server's JSON key (case-sensitive!)
+        public string Username;
+        public string Password;
+    }
+
+    [System.Serializable]
+    public class AuthResponse
+    {
+        public string token;
         public string message;
     }
-    
     public struct PlayerProfile
     {
         public string username;   // Must match the server's JSON key (case-sensitive!)
         public int level;
         public int xp;
     }
-
+    public struct InfoPopupArgs
+    {
+        public string Text;
+        public InfoPopupType Type;
+    }
+    
     public struct PurchaseRequest
     {
         public int itemID;
@@ -75,4 +85,21 @@ namespace Data
     {
         public bool success;
     }
+    
+    #region << Global Enums>>
+    public enum InfoPopupType
+    {
+        Log,
+        Warning,
+        Error
+    }
+    
+    public enum AuthenticationType
+    {
+        Login,
+        Register,
+    }
+    public enum ServiceEventType { Connect, Disconnect, Login, Register }
+    
+    #endregion
 }

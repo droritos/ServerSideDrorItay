@@ -16,19 +16,19 @@ namespace Manager
 
         private void Start()
         {
-            SetUpServer();
+            //SetUpServer();
         }
 
         private void SetUpServer()
         {
-            authService.Login();
-            playerService.GetProfile();
-            InsertRandomMatches();
+            //authService.Login();
+            //playerService.GetProfile();
+            //InsertRandomMatches();
         }
 
         public void UpdateInfromation()
         {
-            // Moshiko is also exits in the server variables
+            
             playerService.UpdateProfile("Moshiko",8,13);
         }
         
@@ -42,14 +42,14 @@ namespace Manager
         {
             for (int i = 0; i < 5; i++)
             {
-                // Random.Range(min, max) gives us random numbers.
+                
                 int randomScore = Random.Range(500, 50000); 
-                float randomDuration = Random.Range(30.0f, 300.0f); // 30s to 5 mins
+                float randomDuration = Random.Range(30.0f, 300.0f); 
         
-                // Pick a random level name from our list
+               
                 string randomLevel = levelNames[Random.Range(0, levelNames.Length)];
 
-                // (Make sure this matches the function name in your class!)
+                
                 MatchResultService.SumbitMatch(randomScore, randomDuration, randomLevel);
             }
             Debug.Log("All 5 Match Read");
