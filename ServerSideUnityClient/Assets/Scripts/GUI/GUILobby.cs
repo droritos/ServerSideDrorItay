@@ -4,7 +4,7 @@ using Scriptable_Objects; // Needed for List
 using TMPro;
 using UnityEngine;
 
-namespace GUI
+namespace GameGUI
 {
     public class GUILobby : MonoBehaviour
     {

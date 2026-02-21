@@ -9,8 +9,6 @@ using UnityEngine.UI;
 public class ChatGUIHandler : MonoBehaviour
 {
     public event UnityAction<string> OnMessageReceived; // Massage is read from the Input Text Mesh Pro Object
-    public event UnityAction OnDisconnected;
-    public event UnityAction OnConnect;
     
     [SerializeField] GUIChannel guiChannel;
     
@@ -83,16 +81,6 @@ public class ChatGUIHandler : MonoBehaviour
             OnMessageReceived?.Invoke(inputField.text);
 
         ClearInput();
-    }
-
-    public void RaiseDisconnected() 
-    {
-        OnDisconnected?.Invoke();
-    }
-
-    public void RaiseOnConnect()
-    {
-        OnConnect?.Invoke();
     }
 
     #endregion

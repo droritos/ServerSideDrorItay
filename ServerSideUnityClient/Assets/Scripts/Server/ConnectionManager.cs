@@ -39,7 +39,8 @@ namespace Server
                 chatService.Initialize(_socket);
                 lobbyService.Initialize(_socket);
 
-                guiChannel.RaiseChanglePanelState(true);
+                servicesChannel.Raise(ServiceEventType.Connect);
+                //guiChannel.RaiseChanglePanelState(true);
                 ReceiveLoop();
             }
             catch (Exception e)

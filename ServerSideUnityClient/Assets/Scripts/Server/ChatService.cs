@@ -45,7 +45,6 @@ namespace Server
             // 2. Send
             await _socket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, CancellationToken.None);
             
-            // 3. Local echo
             guiChannel.RaiseMessageToPrint($"You: {messageText}");
         }
 

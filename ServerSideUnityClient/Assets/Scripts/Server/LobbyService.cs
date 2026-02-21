@@ -42,22 +42,29 @@ namespace Server
 
         private async void SendJoinRoomRequest(string roomName)
         {
-            if (_socket == null || _socket.State != WebSocketState.Open) return;
-
-            // Create the envelope
-            NetworkMessage netMsg = new NetworkMessage
+            try
             {
-                Type = "JoinRoom",
-                Data = roomName
-            };
+                if (_socket == null || _socket.State != WebSocketState.Open) return;
 
-            // Pack and Send
-            string json = JsonUtility.ToJson(netMsg);
-            byte[] bytes = Encoding.UTF8.GetBytes(json);
+                // Create the envelope
+                NetworkMessage netMsg = new NetworkMessage
+                {
+                    Type = "JoinRoom",
+                    Data = roomName
+                };
 
-            await _socket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, CancellationToken.None);
-            
-            Debug.Log($"Requested to join: {roomName}");
+                // Pack and Send
+                string json = JsonUtility.ToJson(netMsg);
+                byte[] bytes = Encoding.UTF8.GetBytes(json);
+
+                await _socket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, CancellationToken.None);
+                
+                Debug.Log($"Requested to join: {roomName}");
+            }
+            catch (Exception e)
+            {
+                Debug.Log($"Failed to join Room: {e}");
+            }
         }
     }
 }

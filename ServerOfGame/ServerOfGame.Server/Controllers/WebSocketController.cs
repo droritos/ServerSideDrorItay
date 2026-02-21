@@ -96,7 +96,7 @@ namespace ServerOfGame.Server.Controllers
                     {
                         if (incomingMsg.Type == "Chat")
                         {
-                            await BroadcastToRoom(session.CurrentRoom, $"{session.Username}: {incomingMsg.Data}");
+                            await BroadcastToRoom(session.CurrentRoom, $"{session.Username}: {incomingMsg.Data}", session);
                         }
                         else if (incomingMsg.Type == "JoinRoom")
                         {
@@ -123,7 +123,7 @@ namespace ServerOfGame.Server.Controllers
             }
         }
 
-        private async Task BroadcastToRoom(string roomName, string messageContent)
+        private async Task BroadcastToRoom(string roomName, string messageContent, PlayerSession sender)
         {
             NetworkMessage message = new NetworkMessage() { Type = "Chat", Data = messageContent };
             string json = JsonSerializer.Serialize(message);
@@ -133,7 +133,8 @@ namespace ServerOfGame.Server.Controllers
 
             foreach (PlayerSession client in _connectedClients.Values)
             {
-                // * ONLY send if they are in the correct room!
+                if (client == sender) continue; // Skip Self
+
                 if (client.CurrentRoom == roomName && client.MySocket.State == WebSocketState.Open)
                 {
                     await client.MySocket.SendAsync(segment, WebSocketMessageType.Text, true, CancellationToken.None);

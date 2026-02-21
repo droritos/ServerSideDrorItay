@@ -11,6 +11,7 @@ namespace Scriptable_Objects
         public event UnityAction<bool> ChanglePanelState;
         public event UnityAction<List<string>> OnPlayersInLobbyChanged;
         public event UnityAction<string> OnRoomJoinRequested;
+        public event UnityAction<string> OnRoomHeaderChanged;
 
         public void RaiseMessageToPrint(string message)
         {
@@ -29,6 +30,10 @@ namespace Scriptable_Objects
         public void RaiseRoomJoinRequested(string roomName)
         {
             OnRoomJoinRequested?.Invoke(roomName);
+        }
+        public void RaiseRoomHeaderChanged(string newRoomName)
+        {
+            OnRoomHeaderChanged?.Invoke(newRoomName);
         }
     }
 }

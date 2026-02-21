@@ -50,12 +50,19 @@ namespace Server
 
         public async void Login(string username, string password)
         {
-            string token = await SendAuthRequest(username, password, "/login");
-
-            if (!string.IsNullOrEmpty(token))
+            try
             {
-                //PopUpGUIHandler.Instance.HandlePopupRequest($"Login Success! Token - {token}", InfoPopupType.Log);
-                servicesChannel.Raise(ServiceEventType.Login, token);
+                string token = await SendAuthRequest(username, password, "/login");
+
+                if (!string.IsNullOrEmpty(token))
+                {
+                    servicesChannel.Raise(ServiceEventType.Login, token);
+                }
+            }
+            catch (Exception e)
+            {
+                PopUpGUIHandler.Instance.HandlePopupRequest($"Login Failed! {e}", InfoPopupType.Error);
+                Debug.LogException(e);
             }
         }
 
