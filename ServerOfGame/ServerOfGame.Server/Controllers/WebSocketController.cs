@@ -13,7 +13,7 @@ namespace ServerOfGame.Server.Controllers
         // 1. A static list to keep track of everyone currently chatting
 
         // We use 'static' so all players share the same list.
-        public static readonly ConcurrentDictionary<WebSocket, string> _connectedClients = new ConcurrentDictionary<WebSocket, string>();
+        public static readonly ConcurrentDictionary<WebSocket, PlayerSession> _connectedClients = new ConcurrentDictionary<WebSocket, PlayerSession>();
 
         [Route("/ws")] // The address will be ws://localhost:port/ws
         public async Task Get()
@@ -42,8 +42,15 @@ namespace ServerOfGame.Server.Controllers
                     displayName = foundUser.Username;
                 }
 
+                var session = new PlayerSession
+                {
+                    Username = displayName,
+                    CurrentRoom = "Lobby", // Everyone starts in the Lobby [cite: 10]
+                    MySocket = webSocket
+                };
+
                 // Add them to our "Phone Book"
-                _connectedClients.TryAdd(webSocket, displayName);
+                _connectedClients.TryAdd(webSocket, session);
                 Console.WriteLine($"{displayName} connected! Total: " + _connectedClients.Count);
                 await BroadcastPlayerList();
 
@@ -80,26 +87,59 @@ namespace ServerOfGame.Server.Controllers
 
                 if(result.MessageType == WebSocketMessageType.Text)
                 {
-                    string name = _connectedClients[socket] + ": ";
+                    string rawJson = Encoding.UTF8.GetString(buffer, 0, result.Count);
 
-                    string finalString = name + Encoding.UTF8.GetString(buffer, 0, result.Count);
-                    var newBuffer = Encoding.UTF8.GetBytes(finalString);
-                    // 3. BROADCAST: Send this message to everyone else!
+                    var incomingMsg = JsonSerializer.Deserialize<NetworkMessage>(rawJson);
 
-                    await BroadcastMessage(newBuffer, newBuffer.Length, socket);
+                    // 3. WHO sent this? Get their session from our dictionary
+                    if (_connectedClients.TryGetValue(socket, out var session))
+                    {
+                        if (incomingMsg.Type == "Chat")
+                        {
+                            await BroadcastToRoom(session.CurrentRoom, $"{session.Username}: {incomingMsg.Data}");
+                        }
+                        else if (incomingMsg.Type == "JoinRoom")
+                        {
+                            // Update their room in their "Passport"
+                            session.CurrentRoom = incomingMsg.Data; // "Room1", "Room2", etc.
+                            Console.WriteLine($"{session.Username} moved to {session.CurrentRoom}");
+
+                            // Optional: Tell everyone in the lobby the list changed
+                            await BroadcastPlayerList();
+                        }
+                    }
                 }
                 else if (result.MessageType == WebSocketMessageType.Close)
                 {
-                    // 4. Handle Disconnect
-                    _connectedClients.TryRemove(socket, value: out string username);
-                    string exitMsg = "Server: " + username + " disconnected.";
-                    await BroadcastPlayerList();
+                    // Update this line to expect a PlayerSession object instead of a string
+                    _connectedClients.TryRemove(socket, out PlayerSession session);
 
-                    var newBuffer = Encoding.UTF8.GetBytes(exitMsg);
-                    await BroadcastMessage(newBuffer, newBuffer.Length, socket);
+                    string username = session?.Username ?? "Unknown";
+                    Console.WriteLine($"{username} disconnected.");
+
+                    await BroadcastPlayerList();
                     await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closed", CancellationToken.None);
                 }
             }
+        }
+
+        private async Task BroadcastToRoom(string roomName, string messageContent)
+        {
+            NetworkMessage message = new NetworkMessage() { Type = "Chat", Data = messageContent };
+            string json = JsonSerializer.Serialize(message);
+            byte[] buffer = Encoding.UTF8.GetBytes(json);
+
+            ArraySegment<byte> segment = new ArraySegment<byte>(buffer);
+
+            foreach (PlayerSession client in _connectedClients.Values)
+            {
+                // * ONLY send if they are in the correct room!
+                if (client.CurrentRoom == roomName && client.MySocket.State == WebSocketState.Open)
+                {
+                    await client.MySocket.SendAsync(segment, WebSocketMessageType.Text, true, CancellationToken.None);
+                }
+            }
+
         }
 
         private async Task BroadcastMessage(byte[] buffer, int count, WebSocket senderSocket)
@@ -121,7 +161,12 @@ namespace ServerOfGame.Server.Controllers
         private async Task BroadcastPlayerList()
         {
             // 1. Get the names and turn them into text
-            var usernames = _connectedClients.Values.ToList();
+            List<string> usernames = _connectedClients.Values
+                                      .Select(s => s.Username)
+                                      .Where(name => !string.IsNullOrWhiteSpace(name))
+                                      .Distinct()
+                                      .ToList();
+
             string dataJson = JsonSerializer.Serialize(usernames);
 
             // 2. Put it in the Envelope (Fill in the blanks!)
@@ -137,11 +182,11 @@ namespace ServerOfGame.Server.Controllers
             var messageSegment = new ArraySegment<byte>(messageBytes);
 
             // 5. Send to EVERYONE (I removed the 'if' check so everyone gets the update!)
-            foreach (var client in _connectedClients.ToList())
+            foreach (var client in _connectedClients.Values)
             {
-                if (client.Key.State == WebSocketState.Open)
+                if (client.MySocket.State == WebSocketState.Open)
                 {
-                    await client.Key.SendAsync(messageSegment, WebSocketMessageType.Text, true, CancellationToken.None);
+                    await client.MySocket.SendAsync(messageSegment, WebSocketMessageType.Text, true, CancellationToken.None);
                 }
             }
         }

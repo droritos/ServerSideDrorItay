@@ -10,6 +10,7 @@ namespace Scriptable_Objects
         public event UnityAction<string> OnMessageToPrint;
         public event UnityAction<bool> ChanglePanelState;
         public event UnityAction<List<string>> OnPlayersInLobbyChanged;
+        public event UnityAction<string> OnRoomJoinRequested;
 
         public void RaiseMessageToPrint(string message)
         {
@@ -24,6 +25,10 @@ namespace Scriptable_Objects
         public void RaiseOnPlayersInLobbyChanged(List<string> playersInLobby)
         {
             OnPlayersInLobbyChanged?.Invoke(playersInLobby);
+        }
+        public void RaiseRoomJoinRequested(string roomName)
+        {
+            OnRoomJoinRequested?.Invoke(roomName);
         }
     }
 }

@@ -148,9 +148,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4aa77ce278fdba74a80452c68b1532a2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Server.ChatService
-  chatGUIHandler: {fileID: 416370401}
-  servicesChannel: {fileID: 11400000, guid: 115d0aeb29483444ba1c45d1dcfd2c2f, type: 2}
   guiChannel: {fileID: 11400000, guid: f3b6e95fb33857344af0b5102221eb4c, type: 2}
+  chatGUIHandler: {fileID: 416370401}
 --- !u!4 &4782148
 Transform:
   m_ObjectHideFlags: 0
@@ -159,13 +158,58 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4782146}
   serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 477623939}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &65510670
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 65510671}
+  - component: {fileID: 65510672}
+  m_Layer: 0
+  m_Name: Lobby
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &65510671
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 65510670}
+  serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 477623939}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &65510672
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 65510670}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3c53eb82843e95b44baa33f3a4541f9c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Server.LobbyService
+  guiChannel: {fileID: 11400000, guid: f3b6e95fb33857344af0b5102221eb4c, type: 2}
 --- !u!1 &73931756
 GameObject:
   m_ObjectHideFlags: 0
@@ -285,6 +329,10 @@ PrefabInstance:
     - target: {fileID: 6317668145872208710, guid: d317e23193be13048947df7e419da04b, type: 3}
       propertyPath: m_Name
       value: Server Test
+      objectReference: {fileID: 0}
+    - target: {fileID: 6317668145872208710, guid: d317e23193be13048947df7e419da04b, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -519,6 +567,40 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &477623938
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 477623939}
+  m_Layer: 0
+  m_Name: Server
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &477623939
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 477623938}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 4782148}
+  - {fileID: 65510671}
+  - {fileID: 919835283}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &485847989
@@ -1491,6 +1573,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Services
       objectReference: {fileID: 0}
+    - target: {fileID: 4089681387419214506, guid: abd2a455f62b3034b89e1f79043f4ae6, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 5231114671479869647, guid: abd2a455f62b3034b89e1f79043f4ae6, type: 3}
       propertyPath: apiClient
       value: 
@@ -1788,6 +1874,54 @@ MonoBehaviour:
   chatGUIHandler: {fileID: 416370401}
   lobbyGUIHandler: {fileID: 181370859}
   servicesChannel: {fileID: 11400000, guid: 115d0aeb29483444ba1c45d1dcfd2c2f, type: 2}
+--- !u!1 &919835282
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 919835283}
+  - component: {fileID: 919835284}
+  m_Layer: 0
+  m_Name: Connection
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &919835283
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 919835282}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 477623939}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &919835284
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 919835282}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 591159437efc9a94c8473645341f1774, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Server.ConnectionManager
+  chatService: {fileID: 4782147}
+  lobbyService: {fileID: 65510672}
+  servicesChannel: {fileID: 11400000, guid: 115d0aeb29483444ba1c45d1dcfd2c2f, type: 2}
+  guiChannel: {fileID: 11400000, guid: f3b6e95fb33857344af0b5102221eb4c, type: 2}
 --- !u!1 &1002988080
 GameObject:
   m_ObjectHideFlags: 0
@@ -3763,7 +3897,7 @@ SceneRoots:
   - {fileID: 876254773}
   - {fileID: 127571296}
   - {fileID: 777903971}
-  - {fileID: 4782148}
+  - {fileID: 477623939}
   - {fileID: 433787119}
   - {fileID: 651595492}
   - {fileID: 903700013}
