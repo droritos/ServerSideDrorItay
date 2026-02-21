@@ -16,17 +16,12 @@ namespace Data
         public bool IsSuccess;
         public string Error;
     }
-    
-    public struct LoginPayLoad
+    [System.Serializable]
+    public class NetworkMessage
     {
-        public string username;
-        public string password;
+        public string Type ;
+        public string Data ;
 
-        public LoginPayLoad(string username, string password)
-        {
-            this.username = username;
-            this.password = password;
-        }
     }
     [System.Serializable]
     public class AuthRequest

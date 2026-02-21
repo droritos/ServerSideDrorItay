@@ -45,11 +45,20 @@ namespace ServerOfGame.Server.Controllers
                 // Add them to our "Phone Book"
                 _connectedClients.TryAdd(webSocket, displayName);
                 Console.WriteLine($"{displayName} connected! Total: " + _connectedClients.Count);
+                await BroadcastPlayerList();
 
-                var welcomeMsg = Encoding.UTF8.GetBytes($"{displayName} Welcome to the Chat!");
+
+                NetworkMessage msg = new NetworkMessage
+                {
+                    Type = "Chat",
+                    Data = $"{displayName}! Welcome to the Chat!"
+                };
+
+                string json = JsonSerializer.Serialize(msg);
+
+                var welcomeMsg = Encoding.UTF8.GetBytes(json);
+
                 await webSocket.SendAsync(new ArraySegment<byte>(welcomeMsg), WebSocketMessageType.Text, true, CancellationToken.None);
-
-                // Keep the connection open (The Loop)
 
                 await ListenForMessages(webSocket);
             }
@@ -84,6 +93,7 @@ namespace ServerOfGame.Server.Controllers
                     // 4. Handle Disconnect
                     _connectedClients.TryRemove(socket, value: out string username);
                     string exitMsg = "Server: " + username + " disconnected.";
+                    await BroadcastPlayerList();
 
                     var newBuffer = Encoding.UTF8.GetBytes(exitMsg);
                     await BroadcastMessage(newBuffer, newBuffer.Length, socket);
@@ -103,6 +113,33 @@ namespace ServerOfGame.Server.Controllers
                 // Don't send the message back to the person who sent it!
                 // (Requirement: "broadcasts to all other connected clients (not back to the sender)")
                 if (client.Key != senderSocket && client.Key.State == WebSocketState.Open)
+                {
+                    await client.Key.SendAsync(messageSegment, WebSocketMessageType.Text, true, CancellationToken.None);
+                }
+            }
+        }
+        private async Task BroadcastPlayerList()
+        {
+            // 1. Get the names and turn them into text
+            var usernames = _connectedClients.Values.ToList();
+            string dataJson = JsonSerializer.Serialize(usernames);
+
+            // 2. Put it in the Envelope (Fill in the blanks!)
+            NetworkMessage msg = new NetworkMessage();
+            msg.Type = "PlayerList";
+            msg.Data = dataJson;
+
+            // 3. Turn the envelope into text
+            string finalJson = JsonSerializer.Serialize(msg);
+
+            // 4. Translate the text into Bytes (Fill in the blank!)
+            byte[] messageBytes = Encoding.UTF8.GetBytes(finalJson);
+            var messageSegment = new ArraySegment<byte>(messageBytes);
+
+            // 5. Send to EVERYONE (I removed the 'if' check so everyone gets the update!)
+            foreach (var client in _connectedClients.ToList())
+            {
+                if (client.Key.State == WebSocketState.Open)
                 {
                     await client.Key.SendAsync(messageSegment, WebSocketMessageType.Text, true, CancellationToken.None);
                 }
