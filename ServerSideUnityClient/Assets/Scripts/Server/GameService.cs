@@ -88,7 +88,7 @@ namespace Server
             byte[] bytes = Encoding.UTF8.GetBytes(json);
 
             await _socket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, CancellationToken.None);
-            Debug.Log("Match end request sent to server.");
+                Debug.Log("Match end request sent to server.");
         }
     }
 }

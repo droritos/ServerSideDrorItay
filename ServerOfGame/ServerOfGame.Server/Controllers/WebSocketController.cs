@@ -80,6 +80,10 @@ namespace ServerOfGame.Server.Controllers
                                 MatchmakingService.Instance.AddToQueue(session);
                             else if (incomingMsg.Type == "Ready")
                                 await GameService.Instance.HandleReadySignal(session, _connectedClients);
+                            else if (incomingMsg.Type == "UpdateScore")
+                                await GameService.Instance.HandleScoreUpdate(session, incomingMsg.Data, _connectedClients);
+                            else if (incomingMsg.Type == "MatchEnd")
+                                await GameService.Instance.HandleMatchEnd(session, _connectedClients);
                         }
                     }
                     else if (result.MessageType == WebSocketMessageType.Close)

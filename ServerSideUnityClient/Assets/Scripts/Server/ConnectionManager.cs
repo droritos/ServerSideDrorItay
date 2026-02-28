@@ -92,6 +92,11 @@ namespace Server
                         matchService.HandleGameStart();
                     else if (msg.Type == "MatchEnd")
                         matchService.HandleGameEnd(msg.Data);// Send Score to server and save to DB
+                    else if (msg.Type == "OpponentScore") // <--- Add this!
+                    {
+                        // msg.Data looks like "OpponentName:5"
+                        matchService.HandleOpponentScoreUpdate(msg.Data);
+                    }
                 }
                 catch
                 {

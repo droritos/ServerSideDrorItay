@@ -15,9 +15,14 @@ namespace ServerOfGame.Server.Services
         // Tracks: RoomID -> Number of Ready Players
         private readonly ConcurrentDictionary<string, int> _readyCounts = new ConcurrentDictionary<string, int>();
 
-
         public async Task HandleReadySignal(PlayerSession session, ConcurrentDictionary<WebSocket, PlayerSession> allClients)
         {
+            if (string.IsNullOrEmpty(session.CurrentRoom) || session.CurrentRoom == "Lobby")
+            {
+                Console.WriteLine($"[Game] {session.Username} tried to ready in Lobby. Ignored.");
+                return;
+            }
+
             _readyCounts.AddOrUpdate(session.CurrentRoom, 1, (roomKey, oldValue) => oldValue + 1);
             int count = _readyCounts[session.CurrentRoom];
 
@@ -63,18 +68,38 @@ namespace ServerOfGame.Server.Services
 
         public async Task HandleMatchEnd(PlayerSession sender, ConcurrentDictionary<WebSocket, PlayerSession> allClients)
         {
-            Console.WriteLine($"[Game] {sender.Username} ended the match.");
+            string matchRoomId = sender.CurrentRoom; 
+            Console.WriteLine($"[Game] Match ended in room {matchRoomId}. Resetting players to Lobby.");
 
             var msg = new NetworkMessage { Type = "MatchEnd", Data = sender.CurrentScore.ToString() };
-            await BroadcastToOpponent(sender, msg, allClients);
 
-            // Call your backend API directly from the server
-            // await _apiClient.PostAsync("/api/match/submit", new { 
-            //    userId = sender.UserId, 
-            //    score = sender.CurrentScore 
-            // });
+            await BroadcastToRoom(matchRoomId, msg, allClients);
 
-            // OnMatchEnded?.Invoke(sender.UserId,sender.CurrentScore)
+            foreach (var client in allClients.Values)
+            {
+                if (client.CurrentRoom == matchRoomId)
+                {
+                    client.CurrentRoom = "Lobby";
+                    client.CurrentScore = 0; // Reset score for next time
+                }
+            }
+
+            await LobbyService.Instance.BroadcastPlayerList(allClients);
+        }
+        private async Task BroadcastToRoom(string roomId, NetworkMessage msg, ConcurrentDictionary<WebSocket, PlayerSession> allClients)
+        {
+            string json = JsonSerializer.Serialize(msg);
+            byte[] buffer = Encoding.UTF8.GetBytes(json);
+            var segment = new ArraySegment<byte>(buffer);
+
+            foreach (var client in allClients.Values)
+            {
+                // Send to EVERYONE in the room, including the sender
+                if (client.CurrentRoom == roomId && client.MySocket.State == WebSocketState.Open)
+                {
+                    await client.MySocket.SendAsync(segment, WebSocketMessageType.Text, true, CancellationToken.None);
+                }
+            }
         }
 
         private async Task BroadcastToOpponent(PlayerSession sender, NetworkMessage msg, ConcurrentDictionary<WebSocket, PlayerSession> allClients)

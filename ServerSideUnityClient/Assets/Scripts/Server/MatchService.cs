@@ -50,13 +50,21 @@ namespace Server
             servicesChannel.Raise(ServiceEventType.StartGameMatch);
             // Example: SceneManager.LoadScene("GameLevel");
         }
+        public void HandleOpponentScoreUpdate(string data)
+        {
+            // You can split the string if you sent Name:Score
+            // string[] split = data.Split(':');
+            // string score = split[1];
+
+            // Trigger the UI to update the opponent's score text
+            //guiChannel.RaiseOpponentScoreChanged(data); 
+        }
         public void HandleGameEnd(string scoreData)
         {
             Debug.Log($"<color=orange>Server signaled Match End. Score: {scoreData}</color>");
     
+            //guiMatchAndGame.ChangePanels(false); 
             servicesChannel.Raise(ServiceEventType.EndGameMatch, scoreData);
-    
-            guiMatchAndGame.ChangePanels(false); 
         }
         private async void SendFindMatchAndGameRequest()
         {

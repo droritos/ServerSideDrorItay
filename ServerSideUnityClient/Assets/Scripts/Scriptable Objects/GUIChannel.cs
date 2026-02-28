@@ -1,6 +1,8 @@
 using System.Collections.Generic;
+using Data;
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.InputSystem;
 
 namespace Scriptable_Objects
 {
@@ -13,6 +15,7 @@ namespace Scriptable_Objects
         public event UnityAction<List<string>> OnPlayersInLobbyChanged;
         public event UnityAction<string> OnRoomJoinRequested;
         public event UnityAction<string> OnRoomHeaderChanged;
+        public event UnityAction<List<MatchResult>> OnLeaderboardChanged;
 
         public void RaiseMessageToPrint(string message)
         {
@@ -41,6 +44,11 @@ namespace Scriptable_Objects
             // This will notify your GUIManager to switch panels 
             // and pass the enemy name to the text field.
             OnMatchFoundUI?.Invoke(opponentName);
+        }
+
+        public void RaiseLeaderboardChanged(List<MatchResult> opponentName)
+        {
+            OnLeaderboardChanged?.Invoke(opponentName);
         }
     }
 }

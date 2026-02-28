@@ -10,7 +10,6 @@ public class ApiClient : MonoBehaviour
     private string _baseUrl = "http://localhost:5235"; 
     private string _authToken;
 
-    // Notice we now return a Task<ApiResult<T>>
     public async Task<ApiResult<T>> SendRequestAsync<T>(string endpoint, string method, object body)
     {
         using (UnityWebRequest www = new UnityWebRequest(_baseUrl + endpoint, method))
@@ -28,7 +27,6 @@ public class ApiClient : MonoBehaviour
 
             www.downloadHandler = new DownloadHandlerBuffer();
 
-            // This is the magic: we AWAIT the request instead of yielding it
             var operation = www.SendWebRequest();
             while (!operation.isDone) await Task.Yield(); 
 

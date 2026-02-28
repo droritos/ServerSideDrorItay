@@ -1,44 +1,40 @@
 using System;
 using System.Collections.Generic;
+using Data;
 using Scriptable_Objects; // Needed for List
 using TMPro;
 using UnityEngine;
 
 namespace GameGUI
 {
-    public class GUIPlayersOnline : MonoBehaviour
+    public class GUILobbyElements : MonoBehaviour
     {
         [SerializeField] private GUIChannel guiChannel;
-        [SerializeField] TextMeshProUGUI playerListText;
+        [SerializeField] PlayersOnlineHandler playersOnlineHandler;
+        [SerializeField] LeaderboardUIHandler leaderboardUIHandler;
 
-        private const string Players = "Players Online\n";
-        
         private void Start()
         {
             guiChannel.OnPlayersInLobbyChanged += UpdatePlayerList;
+            guiChannel.OnLeaderboardChanged += UpdateLeaderboard;
         }
+
+ 
 
         private void OnDestroy()
         {
             guiChannel.OnPlayersInLobbyChanged -= UpdatePlayerList;
+            guiChannel.OnLeaderboardChanged -= UpdateLeaderboard;
         }
 
         // This is the "Public Entrance" for the data
         public void UpdatePlayerList(List<string> players)
         {
-            // Clear the old text
-            playerListText.text = Players;
-
-            // Loop through the list and add each name on a new line
-            foreach (string playerName in players)
-            {
-                playerListText.text += playerName + "\n";
-            }
+            playersOnlineHandler.UpdatePlayerList(players);
         }
-
-        public void ChangeListState(bool state)
+        private void UpdateLeaderboard(List<MatchResult> results)
         {
-            this.gameObject.SetActive(state);
+            leaderboardUIHandler.Populate(results);
         }
     }
 }

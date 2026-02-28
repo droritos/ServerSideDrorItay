@@ -76,13 +76,16 @@ namespace Server
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
                 HttpResponseMessage response = await _httpClient.PostAsync(BaseUrl + endpoint, content);
-
                 string responseText = await response.Content.ReadAsStringAsync();
 
                 if (response.IsSuccessStatusCode)
                 {
+                    // 👇 SAVE THE USERNAME HERE
+                    PlayerPrefs.SetString("LastUsername", username);
+                    PlayerPrefs.Save(); // Ensure it is written to disk
+
                     AuthResponse authResponse = JsonUtility.FromJson<AuthResponse>(responseText);
-                    PopUpGUIHandler.Instance.HandlePopupRequest(authResponse.message,InfoPopupType.Log);
+                    PopUpGUIHandler.Instance.HandlePopupRequest(authResponse.message, InfoPopupType.Log);
                     return authResponse.token;
                 }
                 else

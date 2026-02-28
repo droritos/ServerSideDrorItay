@@ -11,6 +11,7 @@ namespace Server
     {
         [SerializeField] private ApiClient apiClient;
         [SerializeField] private ServicesChannel servicesChannel;
+        [SerializeField] private GUIChannel guiChannel;
         
         private const string sumbitEndPoint = "/api/match/submit";
         private const string leaderboardEndPoint = "/api/match/leaderboard";
@@ -19,11 +20,13 @@ namespace Server
         {
             // Subscribe to the end of the match event
             servicesChannel.Subscribe(ServiceEventType.EndGameMatch, HandleEndGameEvent);
+            servicesChannel.Subscribe(ServiceEventType.Connect, GetLeaderboardAsyncVoid);
         }
 
         private void OnDestroy()
         {
             servicesChannel.Unsubscribe(ServiceEventType.EndGameMatch, HandleEndGameEvent);
+            servicesChannel.Unsubscribe(ServiceEventType.Connect, GetLeaderboardAsyncVoid);
         }
 
         private async void HandleEndGameEvent(string scoreAsString)
@@ -33,15 +36,25 @@ namespace Server
                 // Now we call our async REST method to save the score!
                 await SubmitMatchAsync(finalScore);
         
-                // After submitting, let's refresh the leaderboard to see our new rank!
+                // Refresh leaderboard to see our new rank!
                 await GetLeaderboardAsync();
             }
         }
 
+        private async void GetLeaderboardAsyncVoid()
+        {
+            await GetLeaderboardAsync();
+        }
+
+
         public async Task SubmitMatchAsync(int score)
         {
+            // Get the username from your AuthService or a GlobalData class
+            string currentUsername = PlayerPrefs.GetString("LastUsername", "Unknown"); 
+
             MatchResult result = new MatchResult()
             {
+                username = currentUsername, // Now the server knows WHO scored
                 score = score,
             };
 
@@ -73,12 +86,15 @@ namespace Server
                     Debug.LogWarning("Leaderboard is empty.");
                     return;
                 }
-
+    
                 Debug.Log("--- LEADERBOARD ---");
                 foreach (MatchResult entry in result.Data.list)
                 {
-                    Debug.Log($"Score: {entry.score}");
+                    // 👇 Print the name AND the score
+                    Debug.Log($"<color=cyan>{entry.username}: {entry.score}</color>");
                 }
+
+                guiChannel.RaiseLeaderboardChanged(result.Data.list);
             }
             else
             {

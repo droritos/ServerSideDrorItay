@@ -63,6 +63,7 @@ namespace Data
     [System.Serializable]
     public struct MatchResult
     {
+        public string username ;
         public int score;
     }
     
