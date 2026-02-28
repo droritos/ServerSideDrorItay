@@ -64,8 +64,6 @@ namespace Data
     public struct MatchResult
     {
         public int score;
-        public float durationSeconds;
-        public string levelName;
     }
     
     [System.Serializable]
@@ -94,7 +92,15 @@ namespace Data
         Login,
         Register,
     }
-    public enum ServiceEventType { Connect, Disconnect, Login, Register }
+    public enum ServiceEventType 
+    {
+      Connect, 
+      Disconnect, 
+      Login, 
+      Register,
+      StartGameMatch,
+      EndGameMatch
+    }
     
     #endregion
 }

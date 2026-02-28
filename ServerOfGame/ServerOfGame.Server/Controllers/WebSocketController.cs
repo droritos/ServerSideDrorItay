@@ -59,51 +59,76 @@ namespace ServerOfGame.Server.Controllers
         private async Task ListenForMessages(WebSocket socket)
         {
             var buffer = new byte[1024 * 4];
-            while (socket.State == WebSocketState.Open)
+            try
             {
-                var result = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
-
-                if (result.MessageType == WebSocketMessageType.Text)
+                while (socket.State == WebSocketState.Open)
                 {
-                    string rawJson = Encoding.UTF8.GetString(buffer, 0, result.Count);
-                    var incomingMsg = JsonSerializer.Deserialize<NetworkMessage>(rawJson);
+                    var result = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
 
-                    if (_connectedClients.TryGetValue(socket, out var session))
+                    if (result.MessageType == WebSocketMessageType.Text)
                     {
-                        if (incomingMsg.Type == "Chat")
+                        string rawJson = Encoding.UTF8.GetString(buffer, 0, result.Count);
+                        var incomingMsg = JsonSerializer.Deserialize<NetworkMessage>(rawJson);
+
+                        if (_connectedClients.TryGetValue(socket, out var session))
                         {
-                            // Refactored to ChatService
-                            await ChatService.Instance.HandleChat(session, incomingMsg.Data, _connectedClients);
-                        }
-                        else if (incomingMsg.Type == "JoinRoom")
-                        {
-                            // Refactored to LobbyService
-                            await LobbyService.Instance.SwitchRoom(session, incomingMsg.Data, _connectedClients);
-                        }
-                        else if (incomingMsg.Type == "FindMatch")
-                        {
-                            MatchmakingService.Instance.AddToQueue(session);
+                            if (incomingMsg.Type == "Chat")
+                                await ChatService.Instance.HandleChat(session, incomingMsg.Data, _connectedClients);
+                            else if (incomingMsg.Type == "JoinRoom")
+                                await LobbyService.Instance.SwitchRoom(session, incomingMsg.Data, _connectedClients);
+                            else if (incomingMsg.Type == "FindMatch")
+                                MatchmakingService.Instance.AddToQueue(session);
+                            else if (incomingMsg.Type == "Ready")
+                                await GameService.Instance.HandleReadySignal(session, _connectedClients);
                         }
                     }
-                }
-                else if (result.MessageType == WebSocketMessageType.Close)
-                {
-                    _connectedClients.TryRemove(socket, out PlayerSession session);
-                    Console.WriteLine($"{session?.Username ?? "Unknown"} disconnected.");
-
-                    await LobbyService.Instance.BroadcastPlayerList(_connectedClients);
-                    await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closed", CancellationToken.None);
+                    else if (result.MessageType == WebSocketMessageType.Close)
+                    {
+                        await HandleCleanup(socket); // Use a central cleanup method
+                        break;
+                    }
                 }
             }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Socket exception: {ex.Message}");
+                await HandleCleanup(socket);
+            }
         }
-
         private async Task SendWelcomeMessage(WebSocket socket, string name)
         {
             var msg = new NetworkMessage { Type = "Chat", Data = $"{name}! Welcome to the Chat!" };
             var buffer = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(msg));
             await socket.SendAsync(new ArraySegment<byte>(buffer), WebSocketMessageType.Text, true, CancellationToken.None);
         }
+        private async Task HandleCleanup(WebSocket socket)
+        {
+            if (_connectedClients.TryRemove(socket, out PlayerSession session))
+            {
+                string username = session?.Username ?? "Unknown";
+                string room = session?.CurrentRoom ?? "Lobby";
+                Console.WriteLine($"{username} removed from {room}.");
 
+                // Requirement: Handle "client disconnected - ends in who won"
+                if (room != "Lobby")
+                {
+                    // Tell GameService to handle the forfeit/win logic
+                    await GameService.Instance.HandleMatchEnd(session, _connectedClients);
+                }
+
+                // Refresh the lobby for everyone else
+                await LobbyService.Instance.BroadcastPlayerList(_connectedClients);
+            }
+
+            if (socket.State != WebSocketState.Aborted && socket.State != WebSocketState.Closed)
+            {
+                try 
+                { 
+                    await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closed", CancellationToken.None); 
+                } 
+                catch { }
+            }
+        }
         private List<User> LoadUsers() // Need to be SQL or anther DB
         {
             var filePath = Path.Combine(Directory.GetCurrentDirectory(), "users.json");

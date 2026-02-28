@@ -1,69 +1,89 @@
+using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Data;
+using Scriptable_Objects;
 using UnityEngine;
 
 namespace Server
 {
-   public class MatchResultService : MonoBehaviour
-   {
-      [SerializeField] ApiClient apiClient;
-      private const string sumbitEndPoint = "/api/match/submit";
-      private const string leaderboardEndPoint = "/api/match/leaderboard";
-   
-      public void SumbitMatch(int score, float durationSeconds, string levelName)
-      {
-         MatchResult result = new MatchResult()
-         {
-            score = score,
-            durationSeconds = durationSeconds,
-            levelName = levelName,
-         };
+    public class MatchResultService : MonoBehaviour
+    {
+        [SerializeField] private ApiClient apiClient;
+        [SerializeField] private ServicesChannel servicesChannel;
+        
+        private const string sumbitEndPoint = "/api/match/submit";
+        private const string leaderboardEndPoint = "/api/match/leaderboard";
 
-         StartCoroutine(
-            apiClient.SendRequest<SubmitResponse>(sumbitEndPoint, GlobalData.POST, result,
-               (apiResult) => 
-               {
-                 
-                  if (apiResult.IsSuccess && apiResult.Data.success)
-                  {
-                     Debug.Log($"<color=green>Match Submitted!</color>");
-                  }
-                  else
-                  {
-                     Debug.LogError($"<color=red>Cant Submit Match:</color> {apiResult.Error}");
-                  }
-               }
-            )
-         );
-      }
-   
-      public void GetLeaderboard()
-      {
-         StartCoroutine(
-            apiClient.SendRequest<LeaderboardResponse>(leaderboardEndPoint, GlobalData.GET, null,
-               (result) =>
-               {
-                  if (result.IsSuccess)
-                  {
-                     if (result.Data.list == null)
-                     {
-                        Debug.LogWarning("<color=red>Leaderboard list is null! (Did you restart the server?)");
-                        return;
-                     }
-                     
-                     Debug.Log("--- LEADERBOARD ---");
-                     foreach (MatchResult entry in result.Data.list)
-                     {
-                        Debug.Log($"<color=cyan>Score: {entry.score} | Level: {entry.levelName}");
-                     }
-                  }
-                  else
-                  {
-                     Debug.LogError("Failed to fetch leaderboard: " + result.Error);
-                  }
-               }
-            )
-         );
-      }
-   }
+        private void Start()
+        {
+            // Subscribe to the end of the match event
+            servicesChannel.Subscribe(ServiceEventType.EndGameMatch, HandleEndGameEvent);
+        }
+
+        private void OnDestroy()
+        {
+            servicesChannel.Unsubscribe(ServiceEventType.EndGameMatch, HandleEndGameEvent);
+        }
+
+        private async void HandleEndGameEvent(string scoreAsString)
+        {
+            if (int.TryParse(scoreAsString, out int finalScore))
+            {
+                // Now we call our async REST method to save the score!
+                await SubmitMatchAsync(finalScore);
+        
+                // After submitting, let's refresh the leaderboard to see our new rank!
+                await GetLeaderboardAsync();
+            }
+        }
+
+        public async Task SubmitMatchAsync(int score)
+        {
+            MatchResult result = new MatchResult()
+            {
+                score = score,
+            };
+
+            Debug.Log("<color=yellow>Submitting match results...</color>");
+            
+            // Using our new async SendRequest
+            var apiResult = await apiClient.SendRequestAsync<SubmitResponse>(sumbitEndPoint, GlobalData.POST, result);
+
+            if (apiResult.IsSuccess && apiResult.Data.success)
+            {
+                Debug.Log("<color=green>Match Submitted Successfully!</color>");
+            }
+            else
+            {
+                Debug.LogError($"<color=red>Submit Failed:</color> {apiResult.Error}");
+            }
+        }
+
+        public async Task GetLeaderboardAsync()
+        {
+            Debug.Log("<color=cyan>Fetching Leaderboard...</color>");
+            
+            var result = await apiClient.SendRequestAsync<LeaderboardResponse>(leaderboardEndPoint, GlobalData.GET, null);
+
+            if (result.IsSuccess)
+            {
+                if (result.Data.list == null)
+                {
+                    Debug.LogWarning("Leaderboard is empty.");
+                    return;
+                }
+
+                Debug.Log("--- LEADERBOARD ---");
+                foreach (MatchResult entry in result.Data.list)
+                {
+                    Debug.Log($"Score: {entry.score}");
+                }
+            }
+            else
+            {
+                Debug.LogError($"Leaderboard Error: {result.Error}");
+            }
+        }
+    }
 }

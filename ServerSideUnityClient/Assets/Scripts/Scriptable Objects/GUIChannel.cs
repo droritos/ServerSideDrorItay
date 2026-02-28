@@ -8,6 +8,7 @@ namespace Scriptable_Objects
     public class GUIChannel : ScriptableObject
     {
         public event UnityAction<string> OnMessageToPrint;
+        public event UnityAction<string> OnMatchFoundUI;
         public event UnityAction<bool> ChanglePanelState;
         public event UnityAction<List<string>> OnPlayersInLobbyChanged;
         public event UnityAction<string> OnRoomJoinRequested;
@@ -34,6 +35,12 @@ namespace Scriptable_Objects
         public void RaiseRoomHeaderChanged(string newRoomName)
         {
             OnRoomHeaderChanged?.Invoke(newRoomName);
+        }
+        public void RaiseMatchFoundUI(string opponentName)
+        {
+            // This will notify your GUIManager to switch panels 
+            // and pass the enemy name to the text field.
+            OnMatchFoundUI?.Invoke(opponentName);
         }
     }
 }

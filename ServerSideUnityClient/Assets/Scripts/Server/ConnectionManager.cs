@@ -3,6 +3,7 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using Data;
+using GameGUI;
 using Scriptable_Objects;
 using UnityEngine;
 
@@ -13,6 +14,8 @@ namespace Server
         [Header("Services")]
         [SerializeField] private ChatService chatService;
         [SerializeField] private LobbyService lobbyService;
+        [SerializeField] private MatchService matchService;
+        [SerializeField] private GameService gameService;
         
         [Header("Channels")]
         [SerializeField] private ServicesChannel servicesChannel;
@@ -20,11 +23,22 @@ namespace Server
         
         private ClientWebSocket _socket;
         private const string URL = "ws://localhost:5235/ws";
-        
+
+        #region << Unity Functions >>
         private void Start()
         {
             servicesChannel.Subscribe(ServiceEventType.Login, Connect);
         }
+        private void OnApplicationQuit()
+        {
+            CleanupSocket();
+        }
+
+        private void OnDisable()
+        {
+            CleanupSocket();
+        }
+        #endregion
         
         private async void Connect(string token)
         {
@@ -38,6 +52,8 @@ namespace Server
                 // Hand the socket to our specialized services
                 chatService.Initialize(_socket);
                 lobbyService.Initialize(_socket);
+                matchService.Initialize(_socket);
+                gameService.Initialize(_socket);
 
                 servicesChannel.Raise(ServiceEventType.Connect);
                 //guiChannel.RaiseChanglePanelState(true);
@@ -66,11 +82,29 @@ namespace Server
                         chatService.HandleChatMessage(msg.Data);
                     else if (msg.Type == "PlayerList")
                         lobbyService.HandlePlayerList(msg.Data);
+                    // Inside your Message Handler
+                    if (msg.Type == "MatchFound")
+                    {
+                        string opponentName = msg.Data;
+                        matchService.HandleMatchFound(opponentName);
+                    }
+                    else if (msg.Type == "GameStart")
+                        matchService.HandleGameStart();
+                    else if (msg.Type == "MatchEnd")
+                        matchService.HandleGameEnd(msg.Data);// Send Score to server and save to DB
                 }
                 catch
                 {
                     // /* Handle non-JSON or malformed data */
                 }
+            }
+        }
+        private async void CleanupSocket()
+        {
+            if (_socket != null && _socket.State == WebSocketState.Open)
+            {
+                await _socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", CancellationToken.None);
+                _socket.Dispose();
             }
         }
     }

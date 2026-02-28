@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace GameGUI
 {
-    public class GUILobby : MonoBehaviour
+    public class GUIPlayersOnline : MonoBehaviour
     {
         [SerializeField] private GUIChannel guiChannel;
         [SerializeField] TextMeshProUGUI playerListText;
@@ -34,6 +34,11 @@ namespace GameGUI
             {
                 playerListText.text += playerName + "\n";
             }
+        }
+
+        public void ChangeListState(bool state)
+        {
+            this.gameObject.SetActive(state);
         }
     }
 }

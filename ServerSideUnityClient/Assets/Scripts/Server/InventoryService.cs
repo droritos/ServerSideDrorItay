@@ -9,7 +9,7 @@ namespace Server
 
       
         private const string endPoint = "/api/inventory/purchase";
-
+/*
         public void PurchaseItem(int id)
         {
            
@@ -24,7 +24,7 @@ namespace Server
                 OnPurchaseComplete
             ));
         }
-
+*/
         private void OnPurchaseComplete(ApiResult<PurchaseResponse> result)
         {
             if (result.IsSuccess && result.Data.isSuccess)

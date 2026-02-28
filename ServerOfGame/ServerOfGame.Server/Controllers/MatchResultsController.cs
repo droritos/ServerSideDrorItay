@@ -6,7 +6,7 @@ namespace ServerOfGame.Server.Controllers
 {
     [ApiController]
     [Route("api/match")] // Matching like in Unity
-    public class MatchController : ControllerBase
+    public class MatchResultsController : ControllerBase
     {
         private static List<MatchResult> matchResults = new List<MatchResult>();
 
@@ -15,7 +15,6 @@ namespace ServerOfGame.Server.Controllers
         {
             matchResults.Add(matchResult);
 
-            // FIX: Don't return "true". Return an object containing true.
             return Ok(new SubmitResponse { success = true });
         }
 
