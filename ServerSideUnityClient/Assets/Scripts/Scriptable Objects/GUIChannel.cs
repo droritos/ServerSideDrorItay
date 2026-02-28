@@ -1,0 +1,54 @@
+using System.Collections.Generic;
+using Data;
+using UnityEngine;
+using UnityEngine.Events;
+using UnityEngine.InputSystem;
+
+namespace Scriptable_Objects
+{
+    [CreateAssetMenu(fileName = "GUIEvents", menuName = "Channels/GUI Events")]
+    public class GUIChannel : ScriptableObject
+    {
+        public event UnityAction<string> OnMessageToPrint;
+        public event UnityAction<string> OnMatchFoundUI;
+        public event UnityAction<bool> ChanglePanelState;
+        public event UnityAction<List<string>> OnPlayersInLobbyChanged;
+        public event UnityAction<string> OnRoomJoinRequested;
+        public event UnityAction<string> OnRoomHeaderChanged;
+        public event UnityAction<List<MatchResult>> OnLeaderboardChanged;
+
+        public void RaiseMessageToPrint(string message)
+        {
+            OnMessageToPrint?.Invoke(message);
+        }
+
+        public void RaiseChanglePanelState(bool changlePanelState)
+        {
+            ChanglePanelState?.Invoke(changlePanelState);
+        }
+
+        public void RaiseOnPlayersInLobbyChanged(List<string> playersInLobby)
+        {
+            OnPlayersInLobbyChanged?.Invoke(playersInLobby);
+        }
+        public void RaiseRoomJoinRequested(string roomName)
+        {
+            OnRoomJoinRequested?.Invoke(roomName);
+        }
+        public void RaiseRoomHeaderChanged(string newRoomName)
+        {
+            OnRoomHeaderChanged?.Invoke(newRoomName);
+        }
+        public void RaiseMatchFoundUI(string opponentName)
+        {
+            // This will notify your GUIManager to switch panels 
+            // and pass the enemy name to the text field.
+            OnMatchFoundUI?.Invoke(opponentName);
+        }
+
+        public void RaiseLeaderboardChanged(List<MatchResult> opponentName)
+        {
+            OnLeaderboardChanged?.Invoke(opponentName);
+        }
+    }
+}

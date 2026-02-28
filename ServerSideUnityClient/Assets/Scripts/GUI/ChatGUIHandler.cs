@@ -1,5 +1,6 @@
 
 using System;
+using Scriptable_Objects;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
@@ -7,9 +8,9 @@ using UnityEngine.UI;
 
 public class ChatGUIHandler : MonoBehaviour
 {
-    public event UnityAction<string> OnMessageReceived;
-    public event UnityAction OnDisconnected;
-    public event UnityAction OnConnect;
+    public event UnityAction<string> OnMessageReceived; // Massage is read from the Input Text Mesh Pro Object
+    
+    [SerializeField] GUIChannel guiChannel;
     
     [Header("Refences")]
     [SerializeField] Transform chatPanel;
@@ -25,6 +26,18 @@ public class ChatGUIHandler : MonoBehaviour
     [SerializeField] RectTransform chatRoomPanel;
     [SerializeField] RectTransform disconnectedPanel;
 
+    #region << Unity Functions >>
+    private void Start()
+    {
+        guiChannel.OnMessageToPrint += AddMessageToChat;
+        guiChannel.ChanglePanelState += ChangePanels;
+    }
+
+    private void OnDestroy()
+    {
+        guiChannel.OnMessageToPrint -= AddMessageToChat;
+        guiChannel.ChanglePanelState -= ChangePanels;
+    }
     private void Update()
     {
         bool input = Input.GetKeyDown(KeyCode.KeypadEnter) || Input.GetKeyDown(KeyCode.Return);
@@ -39,14 +52,15 @@ public class ChatGUIHandler : MonoBehaviour
             inputField.ActivateInputField(); 
         }
     }
+    #endregion
     
-    public void AddMessageToChat(string text)
+    private void AddMessageToChat(string text)
     {
         TextMeshProUGUI textObject = Instantiate(textPrefab, chatPanel);
         textObject.SetText(text);
     }
 
-    public void ChangePanels(bool connected) // // Should Be Handled with servicesChannel instead
+    private void ChangePanels(bool connected) // // Should Be Handled with servicesChannel instead
     {
         chatRoomPanel.gameObject.SetActive(connected);
         disconnectedPanel.gameObject.SetActive(!connected);
@@ -67,16 +81,6 @@ public class ChatGUIHandler : MonoBehaviour
             OnMessageReceived?.Invoke(inputField.text);
 
         ClearInput();
-    }
-
-    public void RaiseDisconnected() // Also Connect to the submitButton!
-    {
-        OnDisconnected?.Invoke();
-    }
-
-    public void RaiseOnConnect()
-    {
-        OnConnect?.Invoke();
     }
 
     #endregion

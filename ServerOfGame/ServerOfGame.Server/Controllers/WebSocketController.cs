@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using ServerOfGame.Server.Models;
+using ServerOfGame.Server.Services;
 using System.Collections.Concurrent;
 using System.Net.WebSockets;
 using System.Text;
@@ -10,118 +11,138 @@ namespace ServerOfGame.Server.Controllers
     [ApiController]
     public class WebSocketController : ControllerBase
     {
-        // 1. A static list to keep track of everyone currently chatting
+        public static readonly ConcurrentDictionary<WebSocket, PlayerSession> _connectedClients = new ConcurrentDictionary<WebSocket, PlayerSession>();
 
-        // We use 'static' so all players share the same list.
-        public static readonly ConcurrentDictionary<WebSocket, string> _connectedClients = new ConcurrentDictionary<WebSocket, string>();
-
-        [Route("/ws")] // The address will be ws://localhost:port/ws
+        [Route("/ws")]
         public async Task Get()
-        {   
-            // Check: Is this a WebSocket request? (Or just a normal HTTP GET?)
+        {
             if (HttpContext.WebSockets.IsWebSocketRequest)
             {
-                // Validate Token
                 var token = HttpContext.Request.Query["access_token"];
-                if(string.IsNullOrEmpty(token))
+                if (string.IsNullOrEmpty(token))
                 {
                     HttpContext.Response.StatusCode = 401;
                     return;
                 }
 
-                // Accept the call!
                 var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
 
                 string displayName = "UnknownUser";
-
                 var allUsers = LoadUsers();
                 var foundUser = allUsers.FirstOrDefault(u => u.Id == token);
 
-                if (foundUser != null)
-                {
-                    displayName = foundUser.Username;
-                }
+                if (foundUser != null) displayName = foundUser.Username;
 
-                // Add them to our "Phone Book"
-                _connectedClients.TryAdd(webSocket, displayName);
+                var session = new PlayerSession
+                {
+                    Username = displayName,
+                    CurrentRoom = "Lobby",
+                    MySocket = webSocket
+                };
+
+                _connectedClients.TryAdd(webSocket, session);
                 Console.WriteLine($"{displayName} connected! Total: " + _connectedClients.Count);
 
-                var welcomeMsg = Encoding.UTF8.GetBytes($"{displayName} Welcome to the Chat!");
-                await webSocket.SendAsync(new ArraySegment<byte>(welcomeMsg), WebSocketMessageType.Text, true, CancellationToken.None);
+                await LobbyService.Instance.BroadcastPlayerList(_connectedClients);
 
-                // Keep the connection open (The Loop)
+                // Welcome Message
+                await SendWelcomeMessage(webSocket, displayName);
 
                 await ListenForMessages(webSocket);
             }
             else
             {
-                HttpContext.Response.StatusCode = 400; // Bad Request
+                HttpContext.Response.StatusCode = 400;
             }
         }
 
-        // We will fill this in next!
         private async Task ListenForMessages(WebSocket socket)
         {
-            // Just a placeholder to keep the connection open for now
             var buffer = new byte[1024 * 4];
-            while (socket.State == WebSocketState.Open)
+            try
             {
-                var result = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
-
-
-                if(result.MessageType == WebSocketMessageType.Text)
+                while (socket.State == WebSocketState.Open)
                 {
-                    string name = _connectedClients[socket] + ": ";
+                    var result = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
 
-                    string finalString = name + Encoding.UTF8.GetString(buffer, 0, result.Count);
-                    var newBuffer = Encoding.UTF8.GetBytes(finalString);
-                    // 3. BROADCAST: Send this message to everyone else!
+                    if (result.MessageType == WebSocketMessageType.Text)
+                    {
+                        string rawJson = Encoding.UTF8.GetString(buffer, 0, result.Count);
+                        var incomingMsg = JsonSerializer.Deserialize<NetworkMessage>(rawJson);
 
-                    await BroadcastMessage(newBuffer, newBuffer.Length, socket);
-                }
-                else if (result.MessageType == WebSocketMessageType.Close)
-                {
-                    // 4. Handle Disconnect
-                    _connectedClients.TryRemove(socket, value: out string username);
-                    string exitMsg = "Server: " + username + " disconnected.";
-
-                    var newBuffer = Encoding.UTF8.GetBytes(exitMsg);
-                    await BroadcastMessage(newBuffer, newBuffer.Length, socket);
-                    await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closed", CancellationToken.None);
+                        if (_connectedClients.TryGetValue(socket, out var session))
+                        {
+                            if (incomingMsg.Type == "Chat")
+                                await ChatService.Instance.HandleChat(session, incomingMsg.Data, _connectedClients);
+                            else if (incomingMsg.Type == "JoinRoom")
+                                await LobbyService.Instance.SwitchRoom(session, incomingMsg.Data, _connectedClients);
+                            else if (incomingMsg.Type == "FindMatch")
+                                MatchmakingService.Instance.AddToQueue(session);
+                            else if (incomingMsg.Type == "Ready")
+                                await GameService.Instance.HandleReadySignal(session, _connectedClients);
+                            else if (incomingMsg.Type == "UpdateScore")
+                                await GameService.Instance.HandleScoreUpdate(session, incomingMsg.Data, _connectedClients);
+                            else if (incomingMsg.Type == "MatchEnd")
+                                await GameService.Instance.HandleMatchEnd(session, _connectedClients);
+                        }
+                    }
+                    else if (result.MessageType == WebSocketMessageType.Close)
+                    {
+                        await HandleCleanup(socket); // Use a central cleanup method
+                        break;
+                    }
                 }
             }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Socket exception: {ex.Message}");
+                await HandleCleanup(socket);
+            }
         }
-
-        private async Task BroadcastMessage(byte[] buffer, int count, WebSocket senderSocket)
+        private async Task SendWelcomeMessage(WebSocket socket, string name)
         {
-            // Copy the message correctly
-            var messageSegment = new ArraySegment<byte>(buffer, 0, count);
-
-            // Loop through all connected clients
-            foreach (var client in _connectedClients.ToList()) // ToList() prevents crashes if someone leaves during the loop
+            var msg = new NetworkMessage { Type = "Chat", Data = $"{name}! Welcome to the Chat!" };
+            var buffer = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(msg));
+            await socket.SendAsync(new ArraySegment<byte>(buffer), WebSocketMessageType.Text, true, CancellationToken.None);
+        }
+        private async Task HandleCleanup(WebSocket socket)
+        {
+            if (_connectedClients.TryRemove(socket, out PlayerSession session))
             {
-                // Don't send the message back to the person who sent it!
-                // (Requirement: "broadcasts to all other connected clients (not back to the sender)")
-                if (client.Key != senderSocket && client.Key.State == WebSocketState.Open)
+                string username = session?.Username ?? "Unknown";
+                string room = session?.CurrentRoom ?? "Lobby";
+                Console.WriteLine($"{username} removed from {room}.");
+
+                // Requirement: Handle "client disconnected - ends in who won"
+                if (room != "Lobby")
                 {
-                    await client.Key.SendAsync(messageSegment, WebSocketMessageType.Text, true, CancellationToken.None);
+                    // Tell GameService to handle the forfeit/win logic
+                    await GameService.Instance.HandleMatchEnd(session, _connectedClients);
                 }
+
+                // Refresh the lobby for everyone else
+                await LobbyService.Instance.BroadcastPlayerList(_connectedClients);
+            }
+
+            if (socket.State != WebSocketState.Aborted && socket.State != WebSocketState.Closed)
+            {
+                try 
+                { 
+                    await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closed", CancellationToken.None); 
+                } 
+                catch { }
             }
         }
-
-        private List<User> LoadUsers()
+        private List<User> LoadUsers() // Need to be SQL or anther DB
         {
             var filePath = Path.Combine(Directory.GetCurrentDirectory(), "users.json");
-            if (System.IO.File.Exists(filePath))
+            if (!System.IO.File.Exists(filePath)) return new List<User>();
+            try
             {
-                try
-                {
-                    string json = System.IO.File.ReadAllText(filePath);
-                    return JsonSerializer.Deserialize<List<User>>(json) ?? new List<User>();
-                }
-                catch { return new List<User>(); }
+                string json = System.IO.File.ReadAllText(filePath);
+                return JsonSerializer.Deserialize<List<User>>(json) ?? new List<User>();
             }
-            return new List<User>();
+            catch { return new List<User>(); }
         }
     }
 }

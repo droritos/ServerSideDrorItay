@@ -16,17 +16,12 @@ namespace Data
         public bool IsSuccess;
         public string Error;
     }
-    
-    public struct LoginPayLoad
+    [System.Serializable]
+    public class NetworkMessage
     {
-        public string username;
-        public string password;
+        public string Type ;
+        public string Data ;
 
-        public LoginPayLoad(string username, string password)
-        {
-            this.username = username;
-            this.password = password;
-        }
     }
     [System.Serializable]
     public class AuthRequest
@@ -68,9 +63,8 @@ namespace Data
     [System.Serializable]
     public struct MatchResult
     {
+        public string username ;
         public int score;
-        public float durationSeconds;
-        public string levelName;
     }
     
     [System.Serializable]
@@ -99,7 +93,15 @@ namespace Data
         Login,
         Register,
     }
-    public enum ServiceEventType { Connect, Disconnect, Login, Register }
+    public enum ServiceEventType 
+    {
+      Connect, 
+      Disconnect, 
+      Login, 
+      Register,
+      StartGameMatch,
+      EndGameMatch
+    }
     
     #endregion
 }

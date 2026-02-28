@@ -5,11 +5,11 @@ using ServerOfGame.Server.Models;
 [Route("api/player")]
 public class PlayerController : ControllerBase
 {
-    private static PlayerProfile testPlayerProfile = new PlayerProfile
+    private static PlayerSession testPlayerProfile = new PlayerSession
     {
-        username = "Moshiko",
-        level = 1,
-        xp = 0
+        Username = "Moshiko",
+        Level = 1,
+        ExperiencePoints = 0
     };
 
     [HttpGet("profile")]
@@ -19,12 +19,12 @@ public class PlayerController : ControllerBase
     }
 
     [HttpPut("profile")]
-    public IActionResult UpdateProfile([FromBody] PlayerProfile updatedData)
+    public IActionResult UpdateProfile([FromBody] PlayerSession updatedData)
     {
-        Console.WriteLine($"Update requested for: {updatedData.username}");
+        Console.WriteLine($"Update requested for: {updatedData.Username}");
 
         // Check if the user is allowed to update
-        bool canUpdatePlayer = testPlayerProfile.username == updatedData.username;
+        bool canUpdatePlayer = testPlayerProfile.Username == updatedData.Username;
 
         if (!canUpdatePlayer)
         {
@@ -33,10 +33,10 @@ public class PlayerController : ControllerBase
         }
 
         // Apply updates
-        testPlayerProfile.level = updatedData.level;
-        testPlayerProfile.xp = updatedData.xp;
+        testPlayerProfile.Level = updatedData.Level;
+        testPlayerProfile.ExperiencePoints = updatedData.ExperiencePoints;
 
-        Console.WriteLine($"Update Saved! New Lvl: {testPlayerProfile.level}");
+        Console.WriteLine($"Update Saved! New Lvl: {testPlayerProfile.Level}");
 
         return Ok(testPlayerProfile);
     }

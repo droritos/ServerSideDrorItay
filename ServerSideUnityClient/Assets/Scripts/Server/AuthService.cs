@@ -50,12 +50,19 @@ namespace Server
 
         public async void Login(string username, string password)
         {
-            string token = await SendAuthRequest(username, password, "/login");
-
-            if (!string.IsNullOrEmpty(token))
+            try
             {
-                //PopUpGUIHandler.Instance.HandlePopupRequest($"Login Success! Token - {token}", InfoPopupType.Log);
-                servicesChannel.Raise(ServiceEventType.Login, token);
+                string token = await SendAuthRequest(username, password, "/login");
+
+                if (!string.IsNullOrEmpty(token))
+                {
+                    servicesChannel.Raise(ServiceEventType.Login, token);
+                }
+            }
+            catch (Exception e)
+            {
+                PopUpGUIHandler.Instance.HandlePopupRequest($"Login Failed! {e}", InfoPopupType.Error);
+                Debug.LogException(e);
             }
         }
 
@@ -69,13 +76,16 @@ namespace Server
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
                 HttpResponseMessage response = await _httpClient.PostAsync(BaseUrl + endpoint, content);
-
                 string responseText = await response.Content.ReadAsStringAsync();
 
                 if (response.IsSuccessStatusCode)
                 {
+                    // 👇 SAVE THE USERNAME HERE
+                    PlayerPrefs.SetString("LastUsername", username);
+                    PlayerPrefs.Save(); // Ensure it is written to disk
+
                     AuthResponse authResponse = JsonUtility.FromJson<AuthResponse>(responseText);
-                    PopUpGUIHandler.Instance.HandlePopupRequest(authResponse.message,InfoPopupType.Log);
+                    PopUpGUIHandler.Instance.HandlePopupRequest(authResponse.message, InfoPopupType.Log);
                     return authResponse.token;
                 }
                 else

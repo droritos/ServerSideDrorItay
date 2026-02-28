@@ -6,7 +6,7 @@ using UnityEngine.Events;
 
 namespace Scriptable_Objects
 {
-    [CreateAssetMenu(fileName = "ServicesEvents", menuName = "Scriptable Objects/ServicesEvents")]
+    [CreateAssetMenu(fileName = "ServicesEvents", menuName = "Channels/Services Events")]
     public class ServicesChannel : ScriptableObject
     {
         private readonly Dictionary<ServiceEventType, UnityAction> _signals = new();

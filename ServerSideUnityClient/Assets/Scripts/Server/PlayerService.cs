@@ -11,7 +11,8 @@ namespace Server
 
         public void GetProfile()
         {
-            StartCoroutine(apiClient.SendRequest<PlayerProfile>(endPoint,
+            /*
+            StartCoroutine(apiClient.SendRequestAsync<PlayerProfile>(endPoint,
                 "GET",
                 null,
                 (result) => 
@@ -26,6 +27,7 @@ namespace Server
                     }
                 }
             ));
+            */
         }
         
         public void UpdateProfile(string nameId,int newLevel, int newXp) 
@@ -37,7 +39,7 @@ namespace Server
                 level = newLevel,
                 xp = newXp
             };
-
+            /*
             StartCoroutine(apiClient.SendRequest<PlayerProfile>(
                 endPoint,
                 GlobalData.PUT,     
@@ -54,6 +56,7 @@ namespace Server
                     }
                 }
             ));
+            */
         }
     }
 }
