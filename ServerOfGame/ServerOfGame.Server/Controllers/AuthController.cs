@@ -1,89 +1,79 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using ServerOfGame.Server.Models;
-using System.Linq;
-using System.Text.Json;
+using ServerOfGame.Server.Services;
 
 namespace ServerOfGame.Server.Controllers
 {
     [ApiController]
-    [Route("api/auth")] // Matching like in Unity
+    [Route("api/auth")]
     public class AuthController : ControllerBase
     {
-        private static string _filePath = Path.Combine(Directory.GetCurrentDirectory(), "users.json");
+        private readonly UserService _users;
+        public AuthController(UserService users) => _users = users;
 
-        private List<User> _usersDB = LoadUsers();
+        // POST api/auth/register
+        [HttpPost("register")]
+        public IActionResult Register([FromBody] AuthRequest req)
+        {
+            if (string.IsNullOrWhiteSpace(req.Username) || string.IsNullOrWhiteSpace(req.Password))
+                return BadRequest("Username and password are required.");
 
+            var (ok, error) = _users.Register(req.Username, req.Password);
+            if (!ok) return BadRequest(error);
+
+            return Ok(new { message = "Registration successful! Please log in." });
+        }
+
+        // POST api/auth/login
         [HttpPost("login")]
-        public IActionResult Login([FromBody] LoginRequest request)
+        public IActionResult Login([FromBody] AuthRequest req)
         {
-            // 1. Search for the user in our "DB"
-            var foundUser = _usersDB.FirstOrDefault(u =>
-                u.Username == request.Username &&
-                u.Password == request.Password
-            );
+            var (ok, token, error) = _users.Login(req.Username, req.Password);
+            if (!ok) return Unauthorized(error);
 
-            // 2. Did we find them?
-            if (foundUser != null)
-            {
-                return Ok(new
-                {
-                    // Send THEIR ID, not a fake one
-                    token = foundUser.Id,
-                    message = "Login Successful!"
-                });
-            }
-
-            return Unauthorized("Wrong username or password");
-        }
-    
-         [HttpPost("register")]
-        public IActionResult Register([FromBody] LoginRequest request)
-        {
-            var userExists = _usersDB.FirstOrDefault(u => u.Username == request.Username);
-
-            // Safe check empty
-            if (userExists != null)
-            {
-                return BadRequest("User already exists");
-            }
-
-            // Add user than save it into the DB
-            User newUser = new User(request.Username, request.Password);
-            _usersDB.Add(newUser);
-            SaveUsers();
-
-            return Ok(new
-            {
-                message = "Registration successful!",
-                token = "" // We send an empty token for now so Unity doesn't complain
-            });
+            return Ok(new { token, message = "Login successful!" });
         }
 
-
-        private static List<User> LoadUsers()
+        // POST api/auth/ban  – admin use only (no full admin system wired, protect as needed)
+        [HttpPost("ban")]
+        public IActionResult Ban([FromBody] BanRequest req)
         {
-            // Use "System.IO.File" instead of just "File"
-            if (System.IO.File.Exists(_filePath))
-            {
-                string json = System.IO.File.ReadAllText(_filePath);
-                return JsonSerializer.Deserialize<List<User>>(json) ?? new List<User>();
-            }
-            return new List<User>();
+            var (ok, error) = _users.BanUser(req.Username, req.Reason ?? "No reason given.");
+            if (!ok) return NotFound(error);
+            return Ok(new { message = $"{req.Username} has been banned." });
         }
 
-        private void SaveUsers()
+        // POST api/auth/unban
+        [HttpPost("unban")]
+        public IActionResult Unban([FromBody] BanRequest req)
         {
-            string json = JsonSerializer.Serialize(_usersDB, new JsonSerializerOptions { WriteIndented = true });
+            var (ok, error) = _users.UnbanUser(req.Username);
+            if (!ok) return NotFound(error);
+            return Ok(new { message = $"{req.Username} has been unbanned." });
+        }
 
-            // Use "System.IO.File" here too!
-            System.IO.File.WriteAllText(_filePath, json);
+        // GET api/auth/leaderboard  – top 10 by wins
+        [HttpGet("leaderboard")]
+        public IActionResult Leaderboard()
+        {
+            var top = _users.GetAll()
+                .OrderByDescending(u => u.Wins)
+                .Take(10)
+                .Select(u => new { u.Username, u.Wins, u.GamesPlayed })
+                .ToList();
+            return Ok(top);
         }
     }
 
-
-    public class LoginRequest
+    public class AuthRequest
     {
-        public string Username { get; set; }
-        public string Password { get; set; }
+        public string Username { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+    }
+
+    public class BanRequest
+    {
+        public string Username { get; set; } = string.Empty;
+        public string? Reason  { get; set; }
     }
 }

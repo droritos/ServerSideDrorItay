@@ -5,47 +5,64 @@ using Data;
 using UnityEngine;
 using UnityEngine.Networking;
 
+/// <summary>
+/// Central HTTP client for all REST calls.
+/// Call SetToken() once after login so every subsequent request carries the JWT.
+/// </summary>
 public class ApiClient : MonoBehaviour
 {
-    private string _baseUrl = "http://localhost:5235"; 
-    private string _authToken;
+    [SerializeField] private string baseUrl = "http://localhost:5235";
+
+    private string _authToken = string.Empty;
+
+    // ── Token management ──────────────────────────────────────
+
+    public void SetToken(string token)
+    {
+        _authToken = token;
+        Debug.Log("[ApiClient] JWT token stored.");
+    }
+
+    public string GetToken() => _authToken;
+
+    // ── Generic async request ─────────────────────────────────
 
     public async Task<ApiResult<T>> SendRequestAsync<T>(string endpoint, string method, object body)
     {
-        using (UnityWebRequest www = new UnityWebRequest(_baseUrl + endpoint, method))
+        using var www = new UnityWebRequest(baseUrl + endpoint, method);
+
+        if (!string.IsNullOrEmpty(_authToken))
+            www.SetRequestHeader("Authorization", "Bearer " + _authToken);
+
+        if (body != null)
         {
-            if (!string.IsNullOrEmpty(_authToken)) 
-                www.SetRequestHeader("Authorization", "Bearer " + _authToken);
-
-            if (body != null)
-            {
-                string json = JsonUtility.ToJson(body);
-                byte[] bodyRaw = Encoding.UTF8.GetBytes(json);
-                www.uploadHandler = new UploadHandlerRaw(bodyRaw);
-                www.SetRequestHeader("Content-Type", "application/json");
-            }
-
-            www.downloadHandler = new DownloadHandlerBuffer();
-
-            var operation = www.SendWebRequest();
-            while (!operation.isDone) await Task.Yield(); 
-
-            ApiResult<T> apiResult = new ApiResult<T>();
-
-            if (www.result == UnityWebRequest.Result.Success)
-            {
-                apiResult.IsSuccess = true;
-                apiResult.Data = typeof(T) == typeof(string) 
-                    ? (T)(object)www.downloadHandler.text 
-                    : JsonUtility.FromJson<T>(www.downloadHandler.text);
-            }
-            else
-            {
-                apiResult.IsSuccess = false;
-                apiResult.Error = $"{www.error}: {www.downloadHandler.text}";
-            }
-
-            return apiResult;
+            string json   = JsonUtility.ToJson(body);
+            byte[] raw    = Encoding.UTF8.GetBytes(json);
+            www.uploadHandler = new UploadHandlerRaw(raw);
+            www.SetRequestHeader("Content-Type", "application/json");
         }
+
+        www.downloadHandler = new DownloadHandlerBuffer();
+
+        var op = www.SendWebRequest();
+        while (!op.isDone) await Task.Yield();
+
+        var result = new ApiResult<T>();
+
+        if (www.result == UnityWebRequest.Result.Success)
+        {
+            result.IsSuccess = true;
+            result.Data = typeof(T) == typeof(string)
+                ? (T)(object)www.downloadHandler.text
+                : JsonUtility.FromJson<T>(www.downloadHandler.text);
+        }
+        else
+        {
+            result.IsSuccess = false;
+            result.Error     = $"{www.error}: {www.downloadHandler.text}";
+            Debug.LogWarning($"[ApiClient] {method} {endpoint} failed: {result.Error}");
+        }
+
+        return result;
     }
 }

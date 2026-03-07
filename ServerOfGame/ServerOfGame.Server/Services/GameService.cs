@@ -6,115 +6,192 @@ using ServerOfGame.Server.Models;
 
 namespace ServerOfGame.Server.Services
 {
+    /// <summary>
+    /// Manages in-progress matches:
+    ///  - Ready-up handshake before start
+    ///  - Score updates with anti-cheat validation
+    ///  - Match-end: determines winner, records W/L, broadcasts result
+    /// </summary>
     public class GameService
     {
-        private static readonly GameService _instance = new GameService();
-        public static GameService Instance => _instance;
+        private static readonly GameService _instance = new();
+        public  static GameService Instance => _instance;
+
+        // RoomId -> ready count
+        private readonly ConcurrentDictionary<string, int> _readyCounts = new();
+
+        // Anti-cheat: max score delta allowed per update (tune to your game)
+        private const int MaxScoreDeltaPerUpdate = 50;
+
         private GameService() { }
 
-        // Tracks: RoomID -> Number of Ready Players
-        private readonly ConcurrentDictionary<string, int> _readyCounts = new ConcurrentDictionary<string, int>();
+        // ── Ready-up ───────────────────────────────────────────
 
-        public async Task HandleReadySignal(PlayerSession session, ConcurrentDictionary<WebSocket, PlayerSession> allClients)
+        public async Task HandleReadySignal(
+            PlayerSession session,
+            ConcurrentDictionary<WebSocket, PlayerSession> allClients)
         {
             if (string.IsNullOrEmpty(session.CurrentRoom) || session.CurrentRoom == "Lobby")
-            {
-                Console.WriteLine($"[Game] {session.Username} tried to ready in Lobby. Ignored.");
                 return;
-            }
 
-            _readyCounts.AddOrUpdate(session.CurrentRoom, 1, (roomKey, oldValue) => oldValue + 1);
-            int count = _readyCounts[session.CurrentRoom];
+            if (session.IsReady) return;          // ignore duplicate ready
+            session.IsReady = true;
 
+            int count = _readyCounts.AddOrUpdate(session.CurrentRoom, 1, (_, v) => v + 1);
             Console.WriteLine($"[Game] {session.Username} ready in {session.CurrentRoom}. Count: {count}");
 
             if (count >= 2)
             {
-                await StartGame(session.CurrentRoom, allClients);
-                // Clean up the counter for this room
                 _readyCounts.TryRemove(session.CurrentRoom, out _);
+                await StartGame(session.CurrentRoom, allClients);
             }
         }
 
-        private async Task StartGame(string roomId, ConcurrentDictionary<WebSocket, PlayerSession> allClients)
+        private async Task StartGame(
+            string roomId,
+            ConcurrentDictionary<WebSocket, PlayerSession> allClients)
         {
-            var msg = new NetworkMessage { Type = "GameStart", Data = "Match Begins!" };
-            string json = JsonSerializer.Serialize(msg);
-            byte[] buffer = Encoding.UTF8.GetBytes(json);
-            var segment = new ArraySegment<byte>(buffer);
-
-            // Send to everyone in THIS room
-            foreach (var client in allClients.Values)
+            // Reset scores for fresh start
+            foreach (var p in allClients.Values.Where(p => p.CurrentRoom == roomId))
             {
-                if (client.CurrentRoom == roomId && client.MySocket.State == WebSocketState.Open)
+                p.CurrentScore = 0;
+                p.IsReady      = false;
+            }
+
+            await BroadcastToRoom(roomId,
+                new NetworkMessage { Type = "GameStart", Data = "Match Begins!" },
+                allClients);
+
+            Console.WriteLine($"[Game] Match started: {roomId}");
+        }
+
+        // ── Score update (with anti-cheat) ────────────────────
+
+        public async Task HandleScoreUpdate(
+            PlayerSession sender,
+            string scoreData,
+            ConcurrentDictionary<WebSocket, PlayerSession> allClients)
+        {
+            if (!int.TryParse(scoreData, out int reported))
+            {
+                Console.WriteLine($"[AntiCheat] {sender.Username} sent non-numeric score: {scoreData}");
+                return;
+            }
+
+            // Anti-cheat: score may only go up, and by a capped amount per message
+            int delta = reported - sender.CurrentScore;
+            if (delta < 0 || delta > MaxScoreDeltaPerUpdate)
+            {
+                Console.WriteLine($"[AntiCheat] {sender.Username} BLOCKED: score jump {sender.CurrentScore}->{reported}");
+                await SendTo(sender,
+                    new NetworkMessage { Type = "AntiCheat", Data = "Invalid score update detected." },
+                    allClients);
+                return;
+            }
+
+            sender.CurrentScore = reported;
+
+            await BroadcastToOpponent(sender,
+                new NetworkMessage { Type = "OpponentScore", Data = $"{sender.Username}:{reported}" },
+                allClients);
+        }
+
+        // ── Match end ─────────────────────────────────────────
+
+        public async Task HandleMatchEnd(
+            PlayerSession sender,
+            ConcurrentDictionary<WebSocket, PlayerSession> allClients,
+            UserService? userService = null)
+        {
+            string roomId = sender.CurrentRoom;
+            if (roomId == "Lobby") return;
+
+            Console.WriteLine($"[Game] Match ended in {roomId}");
+
+            var players = allClients.Values
+                .Where(p => p.CurrentRoom == roomId)
+                .ToList();
+
+            // Determine winner by score
+            PlayerSession? winner = players.Count >= 2
+                ? players.OrderByDescending(p => p.CurrentScore).First()
+                : sender;
+
+            string winnerName = winner?.Username ?? "Unknown";
+
+            // Record W/L in persistent user data
+            if (userService != null)
+            {
+                foreach (var p in players)
                 {
-                    await client.MySocket.SendAsync(segment, WebSocketMessageType.Text, true, CancellationToken.None);
+                    if (p.Username == winnerName)
+                        userService.RecordWin(p.Username);
+                    else
+                        userService.RecordLoss(p.Username);
                 }
             }
-            Console.WriteLine($"[Game] Match started in room: {roomId}");
-        }
 
-        public async Task HandleScoreUpdate(PlayerSession sender, string scoreData, ConcurrentDictionary<WebSocket, PlayerSession> allClients)
-        {
-            // Store it on the server session so the player can't fake it at the end
-            if (int.TryParse(scoreData, out int newScore))
+            // Broadcast result to the whole room
+            await BroadcastToRoom(roomId,
+                new NetworkMessage { Type = "MatchResult", Data = winnerName },
+                allClients);
+
+            // Move everyone back to Lobby
+            foreach (var p in players)
             {
-                sender.CurrentScore = newScore;
-            }
-
-            var msg = new NetworkMessage { Type = "OpponentScore", Data = $"{sender.Username}:{scoreData}" };
-            await BroadcastToOpponent(sender, msg, allClients);
-        }
-
-        public async Task HandleMatchEnd(PlayerSession sender, ConcurrentDictionary<WebSocket, PlayerSession> allClients)
-        {
-            string matchRoomId = sender.CurrentRoom; 
-            Console.WriteLine($"[Game] Match ended in room {matchRoomId}. Resetting players to Lobby.");
-
-            var msg = new NetworkMessage { Type = "MatchEnd", Data = sender.CurrentScore.ToString() };
-
-            await BroadcastToRoom(matchRoomId, msg, allClients);
-
-            foreach (var client in allClients.Values)
-            {
-                if (client.CurrentRoom == matchRoomId)
-                {
-                    client.CurrentRoom = "Lobby";
-                    client.CurrentScore = 0; // Reset score for next time
-                }
+                p.CurrentRoom  = "Lobby";
+                p.CurrentScore = 0;
+                p.IsReady      = false;
             }
 
             await LobbyService.Instance.BroadcastPlayerList(allClients);
         }
-        private async Task BroadcastToRoom(string roomId, NetworkMessage msg, ConcurrentDictionary<WebSocket, PlayerSession> allClients)
-        {
-            string json = JsonSerializer.Serialize(msg);
-            byte[] buffer = Encoding.UTF8.GetBytes(json);
-            var segment = new ArraySegment<byte>(buffer);
 
-            foreach (var client in allClients.Values)
+        // ── Helpers ───────────────────────────────────────────
+
+        private async Task BroadcastToRoom(
+            string roomId,
+            NetworkMessage msg,
+            ConcurrentDictionary<WebSocket, PlayerSession> allClients)
+        {
+            byte[] bytes = Encode(msg);
+            foreach (var p in allClients.Values)
             {
-                // Send to EVERYONE in the room, including the sender
-                if (client.CurrentRoom == roomId && client.MySocket.State == WebSocketState.Open)
+                if (p.CurrentRoom == roomId && p.MySocket?.State == WebSocketState.Open)
+                    await p.MySocket.SendAsync(bytes, WebSocketMessageType.Text, true, CancellationToken.None);
+            }
+        }
+
+        private async Task BroadcastToOpponent(
+            PlayerSession sender,
+            NetworkMessage msg,
+            ConcurrentDictionary<WebSocket, PlayerSession> allClients)
+        {
+            byte[] bytes = Encode(msg);
+            foreach (var p in allClients.Values)
+            {
+                if (p.CurrentRoom == sender.CurrentRoom
+                    && p != sender
+                    && p.MySocket?.State == WebSocketState.Open)
                 {
-                    await client.MySocket.SendAsync(segment, WebSocketMessageType.Text, true, CancellationToken.None);
+                    await p.MySocket.SendAsync(bytes, WebSocketMessageType.Text, true, CancellationToken.None);
                 }
             }
         }
 
-        private async Task BroadcastToOpponent(PlayerSession sender, NetworkMessage msg, ConcurrentDictionary<WebSocket, PlayerSession> allClients)
+        private async Task SendTo(
+            PlayerSession target,
+            NetworkMessage msg,
+            ConcurrentDictionary<WebSocket, PlayerSession> allClients)
         {
-            string json = JsonSerializer.Serialize(msg);
-            byte[] buffer = Encoding.UTF8.GetBytes(json);
-
-            foreach (var client in allClients.Values)
+            if (target.MySocket?.State == WebSocketState.Open)
             {
-                // Send ONLY to the person in the same room who IS NOT the sender
-                if (client.CurrentRoom == sender.CurrentRoom && client != sender && client.MySocket.State == WebSocketState.Open)
-                {
-                    await client.MySocket.SendAsync(new ArraySegment<byte>(buffer), WebSocketMessageType.Text, true, CancellationToken.None);
-                }
+                byte[] bytes = Encode(msg);
+                await target.MySocket.SendAsync(bytes, WebSocketMessageType.Text, true, CancellationToken.None);
             }
         }
+
+        private static byte[] Encode(NetworkMessage msg)
+            => Encoding.UTF8.GetBytes(JsonSerializer.Serialize(msg));
     }
 }

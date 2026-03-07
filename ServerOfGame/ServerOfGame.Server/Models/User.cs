@@ -1,19 +1,28 @@
-﻿namespace ServerOfGame.Server.Models
+namespace ServerOfGame.Server.Models
 {
     public class User
     {
-        public string Username { get; set; }
-        public string Password { get; set; }
-        public string Id { get; set; } // Just hold the data
+        public string Id           { get; set; }
+        public string Username     { get; set; }
+        public string PasswordHash { get; set; }   // bcrypt hash – never plain text
+        public bool   IsBanned     { get; set; }
+        public string BanReason    { get; set; }
+        public int    Wins         { get; set; }
+        public int    GamesPlayed  { get; set; }
+        public int    Gold         { get; set; }
 
-        // 👇 THIS IS THE CONSTRUCTOR
-        public User(string username, string password)
+        public User() { }
+
+        public User(string username, string passwordHash)
         {
-            Username = username;
-            Password = password;
-
-            // Generate the ID once, right here!
-            Id = System.Guid.NewGuid().ToString();
+            Id           = Guid.NewGuid().ToString();
+            Username     = username;
+            PasswordHash = passwordHash;
+            IsBanned     = false;
+            BanReason    = string.Empty;
+            Wins         = 0;
+            GamesPlayed  = 0;
+            Gold         = 500;
         }
     }
 }

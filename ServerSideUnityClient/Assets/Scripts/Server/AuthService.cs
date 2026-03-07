@@ -1,107 +1,87 @@
 using System;
-using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
 using Data;
 using Scriptable_Objects;
 using UnityEngine;
-using UnityEngine.Events;
-
 
 namespace Server
 {
+    /// <summary>
+    /// Handles register and login REST calls.
+    /// On success: stores JWT in ApiClient and raises ServiceEventType.Login so
+    /// ConnectionManager opens the WebSocket.
+    /// </summary>
     public class AuthService : MonoBehaviour
     {
         [Header("References")]
-        [SerializeField] ServicesChannel servicesChannel;
-        [SerializeField] LoginUIManager loginUIManager;
-        
-        private const string BaseUrl = "http://localhost:5235/api/auth"; 
-        private readonly HttpClient _httpClient = new HttpClient();
+        [SerializeField] private ServicesChannel servicesChannel;
+        [SerializeField] private LoginUIManager  loginUIManager;
+        [SerializeField] private ApiClient       apiClient;
+
+        private const string BaseEndpoint = "/api/auth";
 
         private void Start()
         {
-            loginUIManager.LoginResponse += Login;
+            loginUIManager.LoginResponse    += Login;
             loginUIManager.RegisterResponse += Register;
         }
 
         private void OnDestroy()
         {
-            loginUIManager.LoginResponse -= Login;
+            loginUIManager.LoginResponse    -= Login;
             loginUIManager.RegisterResponse -= Register;
         }
 
         private void OnValidate()
         {
-           // if(!servicesChannel)
-           //     servicesChannel = Resources.Load<ServicesChannel>("ServicesEvents");
-            
-            if(!loginUIManager)
-                loginUIManager = FindFirstObjectByType<LoginUIManager>();
+            if (!loginUIManager) loginUIManager = FindFirstObjectByType<LoginUIManager>();
+            if (!apiClient)      apiClient      = FindFirstObjectByType<ApiClient>();
         }
+
+        // ── Register ──────────────────────────────────────────
 
         public async void Register(string username, string password)
         {
-            await SendAuthRequest(username, password, "/register");
-
-            //PopUpGUIHandler.Instance.HandlePopupRequest("Register Success!", InfoPopupType.Log);
-            servicesChannel.Raise(ServiceEventType.Register);
+            var result = await SendAuth(username, password, "/register");
+            if (result.IsSuccess)
+            {
+                PopUpGUIHandler.Instance.HandlePopupRequest("Registered! Please log in.", InfoPopupType.Log);
+                servicesChannel.Raise(ServiceEventType.Register);
+            }
         }
+
+        // ── Login ─────────────────────────────────────────────
 
         public async void Login(string username, string password)
         {
-            try
-            {
-                string token = await SendAuthRequest(username, password, "/login");
+            var result = await SendAuth(username, password, "/login");
+            if (!result.IsSuccess) return;
 
-                if (!string.IsNullOrEmpty(token))
-                {
-                    servicesChannel.Raise(ServiceEventType.Login, token);
-                }
-            }
-            catch (Exception e)
-            {
-                PopUpGUIHandler.Instance.HandlePopupRequest($"Login Failed! {e}", InfoPopupType.Error);
-                Debug.LogException(e);
-            }
+            // Store username for leaderboard submission
+            PlayerPrefs.SetString("LastUsername", username);
+            PlayerPrefs.Save();
+
+            // Give the JWT to ApiClient so future REST calls are authenticated
+            apiClient.SetToken(result.Data.token);
+
+            // Signal ConnectionManager to open the WebSocket
+            servicesChannel.Raise(ServiceEventType.Login, result.Data.token);
         }
 
+        // ── Shared helper ─────────────────────────────────────
 
-        private async Task<string> SendAuthRequest(string username, string password, string endpoint)
+        private async Task<ApiResult<AuthResponse>> SendAuth(string username, string password, string path)
         {
-            try
-            {
-                AuthRequest request = new AuthRequest { Username = username, Password = password };
-                string json = JsonUtility.ToJson(request);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
+            var body   = new AuthRequest { Username = username, Password = password };
+            var result = await apiClient.SendRequestAsync<AuthResponse>(
+                BaseEndpoint + path, GlobalData.POST, body);
 
-                HttpResponseMessage response = await _httpClient.PostAsync(BaseUrl + endpoint, content);
-                string responseText = await response.Content.ReadAsStringAsync();
+            if (result.IsSuccess)
+                PopUpGUIHandler.Instance.HandlePopupRequest(result.Data.message, InfoPopupType.Log);
+            else
+                PopUpGUIHandler.Instance.HandlePopupRequest(result.Error, InfoPopupType.Error);
 
-                if (response.IsSuccessStatusCode)
-                {
-                    // 👇 SAVE THE USERNAME HERE
-                    PlayerPrefs.SetString("LastUsername", username);
-                    PlayerPrefs.Save(); // Ensure it is written to disk
-
-                    AuthResponse authResponse = JsonUtility.FromJson<AuthResponse>(responseText);
-                    PopUpGUIHandler.Instance.HandlePopupRequest(authResponse.message, InfoPopupType.Log);
-                    return authResponse.token;
-                }
-                else
-                {
-                    Debug.LogError($"Auth Error: {responseText}");
-                    PopUpGUIHandler.Instance.HandlePopupRequest(responseText,InfoPopupType.Error);
-                    return null;
-                }
-            }
-            catch (Exception e)
-            {
-                string error = $"Network Error: {e.Message}";
-                //Debug.LogError(error);
-                PopUpGUIHandler.Instance.HandlePopupRequest(error,InfoPopupType.Error);
-                return null;
-            }
+            return result;
         }
     }
 }
