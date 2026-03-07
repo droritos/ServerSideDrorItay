@@ -9,106 +9,121 @@ using UnityEngine;
 
 namespace Server
 {
+    /// <summary>
+    /// Manages the single WebSocket connection to the game server.
+    /// Token comes from AuthService via ServicesChannel Login event.
+    /// Routes incoming messages to the right service.
+    /// </summary>
     public class ConnectionManager : MonoBehaviour
     {
         [Header("Services")]
-        [SerializeField] private ChatService chatService;
-        [SerializeField] private LobbyService lobbyService;
-        [SerializeField] private MatchService matchService;
-        [SerializeField] private GameService gameService;
-        
+        [SerializeField] private ChatService    chatService;
+        [SerializeField] private LobbyService   lobbyService;
+        [SerializeField] private MatchService   matchService;
+        [SerializeField] private GameService    gameService;
+
         [Header("Channels")]
         [SerializeField] private ServicesChannel servicesChannel;
-        [SerializeField] private GUIChannel guiChannel;
-        
-        private ClientWebSocket _socket;
-        private const string URL = "ws://localhost:5235/ws";
+        [SerializeField] private GUIChannel      guiChannel;
 
-        #region << Unity Functions >>
+        private ClientWebSocket _socket;
+        private const string WS_URL = "ws://localhost:5235/ws";
+
         private void Start()
         {
             servicesChannel.Subscribe(ServiceEventType.Login, Connect);
         }
-        private void OnApplicationQuit()
-        {
-            CleanupSocket();
-        }
 
-        private void OnDisable()
-        {
-            CleanupSocket();
-        }
-        #endregion
-        
+        private void OnApplicationQuit() => Disconnect();
+        private void OnDisable()         => Disconnect();
+
+        // ── Connect (called with JWT token) ───────────────────
+
         private async void Connect(string token)
         {
             _socket = new ClientWebSocket();
-            Uri serverUri = new Uri($"{URL}?access_token={token}");
-
             try
             {
-                await _socket.ConnectAsync(serverUri, CancellationToken.None);
-                
-                // Hand the socket to our specialized services
+                await _socket.ConnectAsync(
+                    new Uri($"{WS_URL}?access_token={token}"),
+                    CancellationToken.None);
+
                 chatService.Initialize(_socket);
                 lobbyService.Initialize(_socket);
                 matchService.Initialize(_socket);
                 gameService.Initialize(_socket);
 
                 servicesChannel.Raise(ServiceEventType.Connect);
-                //guiChannel.RaiseChanglePanelState(true);
                 ReceiveLoop();
             }
             catch (Exception e)
             {
-                Debug.LogError($"Connection failed: {e.Message}");
+                Debug.LogError($"[WS] Connection failed: {e.Message}");
+                PopUpGUIHandler.Instance.HandlePopupRequest(
+                    "Could not connect to server.", InfoPopupType.Error);
             }
         }
-        
+
+        // ── Receive loop ──────────────────────────────────────
+
         private async void ReceiveLoop()
         {
-            byte[] buffer = new byte[1024 * 4];
-            while (_socket.State == WebSocketState.Open)
+            byte[] buf = new byte[1024 * 4];
+            while (_socket?.State == WebSocketState.Open)
             {
-                var result = await _socket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
-                string rawText = Encoding.UTF8.GetString(buffer, 0, result.Count);
-
                 try
                 {
-                    NetworkMessage msg = JsonUtility.FromJson<NetworkMessage>(rawText);
+                    var result = await _socket.ReceiveAsync(
+                        new ArraySegment<byte>(buf), CancellationToken.None);
 
-                    // ROUTING: Send the data to the correct service based on Type
-                    if (msg.Type == "Chat")
-                        chatService.HandleChatMessage(msg.Data);
-                    else if (msg.Type == "PlayerList")
-                        lobbyService.HandlePlayerList(msg.Data);
-                    // Inside your Message Handler
-                    if (msg.Type == "MatchFound")
+                    if (result.MessageType == WebSocketMessageType.Close)
                     {
-                        string opponentName = msg.Data;
-                        matchService.HandleMatchFound(opponentName);
+                        Debug.Log("[WS] Server closed connection.");
+                        break;
                     }
-                    else if (msg.Type == "GameStart")
-                        matchService.HandleGameStart();
-                    else if (msg.Type == "MatchEnd")
-                        matchService.HandleGameEnd(msg.Data);// Send Score to server and save to DB
-                    else if (msg.Type == "OpponentScore") // <--- Add this!
-                    {
-                        // msg.Data looks like "OpponentName:5"
-                        matchService.HandleOpponentScoreUpdate(msg.Data);
-                    }
+
+                    string raw = Encoding.UTF8.GetString(buf, 0, result.Count);
+                    NetworkMessage msg;
+                    try { msg = JsonUtility.FromJson<NetworkMessage>(raw); }
+                    catch { continue; }
+
+                    Route(msg);
                 }
-                catch
+                catch (Exception e)
                 {
-                    // /* Handle non-JSON or malformed data */
+                    Debug.LogWarning($"[WS] Receive error: {e.Message}");
+                    break;
                 }
             }
+
+            servicesChannel.Raise(ServiceEventType.Disconnect);
         }
-        private async void CleanupSocket()
+
+        private void Route(NetworkMessage msg)
+        {
+            switch (msg.Type)
+            {
+                case "Chat":         chatService.HandleChatMessage(msg.Data);        break;
+                case "PlayerList":   lobbyService.HandlePlayerList(msg.Data);        break;
+                case "MatchFound":   matchService.HandleMatchFound(msg.Data);        break;
+                case "GameStart":    matchService.HandleGameStart();                 break;
+                case "MatchEnd":     matchService.HandleGameEnd(msg.Data);           break;  // legacy
+                case "MatchResult":  matchService.HandleMatchResult(msg.Data);       break;  // winner name
+                case "OpponentScore":matchService.HandleOpponentScoreUpdate(msg.Data);break;
+                case "AntiCheat":
+                    PopUpGUIHandler.Instance.HandlePopupRequest(msg.Data, InfoPopupType.Error);
+                    break;
+            }
+        }
+
+        // ── Disconnect ────────────────────────────────────────
+
+        private async void Disconnect()
         {
             if (_socket != null && _socket.State == WebSocketState.Open)
             {
-                await _socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", CancellationToken.None);
+                await _socket.CloseAsync(
+                    WebSocketCloseStatus.NormalClosure, "Closing", CancellationToken.None);
                 _socket.Dispose();
             }
         }

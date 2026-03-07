@@ -4,23 +4,33 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
 
-public class ChatService
+namespace ServerOfGame.Server.Services
 {
-    private static readonly ChatService _instance = new ChatService();
-    public static ChatService Instance => _instance;
-    private ChatService() { }
-
-    public async Task HandleChat(PlayerSession sender, string content, ConcurrentDictionary<WebSocket, PlayerSession> allClients)
+    public class ChatService
     {
-        var msg = new NetworkMessage { Type = "Chat", Data = $"{sender.Username}: {content}" }; // [cite: 14]
-        byte[] bytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(msg));
-        var segment = new ArraySegment<byte>(bytes);
+        private static readonly ChatService _instance = new();
+        public  static ChatService Instance => _instance;
+        private ChatService() { }
 
-        foreach (var client in allClients.Values)
+        /// <summary>
+        /// Broadcasts a chat message to everyone in the SAME room as the sender (excluding sender).
+        /// </summary>
+        public async Task HandleChat(
+            PlayerSession sender,
+            string content,
+            ConcurrentDictionary<WebSocket, PlayerSession> allClients)
         {
-            if (client != sender && client.CurrentRoom == sender.CurrentRoom && client.MySocket.State == WebSocketState.Open)
+            var msg   = new NetworkMessage { Type = "Chat", Data = $"{sender.Username}: {content}" };
+            byte[] buf = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(msg));
+
+            foreach (var p in allClients.Values)
             {
-                await client.MySocket.SendAsync(segment, WebSocketMessageType.Text, true, CancellationToken.None);
+                if (p != sender
+                    && p.CurrentRoom == sender.CurrentRoom
+                    && p.MySocket?.State == WebSocketState.Open)
+                {
+                    await p.MySocket.SendAsync(buf, WebSocketMessageType.Text, true, CancellationToken.None);
+                }
             }
         }
     }

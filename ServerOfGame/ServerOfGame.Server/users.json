@@ -1,32 +1,72 @@
 [
   {
+    "Id": "75a1616b-5c28-4a3a-a55c-5ecd988299a8",
     "Username": "a",
-    "Password": "2",
-    "Id": "75a1616b-5c28-4a3a-a55c-5ecd988299a8"
+    "PasswordHash": null,
+    "IsBanned": false,
+    "BanReason": null,
+    "Wins": 0,
+    "GamesPlayed": 0,
+    "Gold": 0
   },
   {
+    "Id": "e174be03-d609-487e-91a9-937f08ac81e6",
     "Username": "tttt",
-    "Password": "1",
-    "Id": "e174be03-d609-487e-91a9-937f08ac81e6"
+    "PasswordHash": null,
+    "IsBanned": false,
+    "BanReason": null,
+    "Wins": 0,
+    "GamesPlayed": 0,
+    "Gold": 0
   },
   {
+    "Id": "c7d27a2a-8de3-4ae5-93ee-3cc3d0806bde",
     "Username": "ta",
-    "Password": "1",
-    "Id": "c7d27a2a-8de3-4ae5-93ee-3cc3d0806bde"
+    "PasswordHash": null,
+    "IsBanned": false,
+    "BanReason": null,
+    "Wins": 0,
+    "GamesPlayed": 0,
+    "Gold": 0
   },
   {
+    "Id": "0e61b01b-f0ca-417e-b7ec-90827ca4262d",
     "Username": "aa",
-    "Password": "a",
-    "Id": "0e61b01b-f0ca-417e-b7ec-90827ca4262d"
+    "PasswordHash": null,
+    "IsBanned": false,
+    "BanReason": null,
+    "Wins": 0,
+    "GamesPlayed": 0,
+    "Gold": 0
   },
   {
+    "Id": "fccec6d2-3fc6-457f-82ff-92f9a0fae19c",
     "Username": "b",
-    "Password": "2",
-    "Id": "fccec6d2-3fc6-457f-82ff-92f9a0fae19c"
+    "PasswordHash": null,
+    "IsBanned": false,
+    "BanReason": null,
+    "Wins": 0,
+    "GamesPlayed": 0,
+    "Gold": 0
   },
   {
+    "Id": "3a655e2a-5ca2-4a5e-b747-5b6e6b298b86",
     "Username": "t",
-    "Password": "2",
-    "Id": "3a655e2a-5ca2-4a5e-b747-5b6e6b298b86"
+    "PasswordHash": null,
+    "IsBanned": false,
+    "BanReason": null,
+    "Wins": 0,
+    "GamesPlayed": 0,
+    "Gold": 0
+  },
+  {
+    "Id": "52cfbc5f-f7a1-43d5-bfa0-c50f65f1c29d",
+    "Username": "itay",
+    "PasswordHash": "$2a$11$JKsTNHCnojTx.z4LQzHAQuyp6gzAf4H5SvZgEPNU03NwNc6gcuG2i",
+    "IsBanned": false,
+    "BanReason": "",
+    "Wins": 0,
+    "GamesPlayed": 0,
+    "Gold": 500
   }
 ]

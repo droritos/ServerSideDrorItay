@@ -10,7 +10,7 @@ namespace ServerOfGame.Server.Controllers
     [Route("api/match")]
     public class MatchResultsController : ControllerBase
     {
-        // Using a static list to act as our temporary "Database" Until Itay fix it
+        
         private static List<MatchResult> matchResults = LoadResults();
 
         private static string _matchFilePath = Path.Combine(Directory.GetCurrentDirectory(), "leaderboard.json");

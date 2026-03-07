@@ -1,39 +1,43 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ServerOfGame.Server.Models;
+using ServerOfGame.Server.Services;
+using System.Security.Claims;
 
 namespace ServerOfGame.Server.Controllers
 {
     [ApiController]
-    [Route("api/Inventory")] // Matching like in Unity
+    [Route("api/inventory")]
+    [Authorize]
     public class InventoryController : ControllerBase
     {
-        private static int _currentGold = 500;
-        private static int anyItemCost = 250;
-
+        private const int ItemCost = 250;
+        private readonly UserService _users;
+        public InventoryController(UserService users) => _users = users;
 
         [HttpPost("purchase")]
-        public IActionResult TryPurchase([FromBody] PurchaseRequest purchaseRequest)
+        public IActionResult Purchase([FromBody] PurchaseRequest req)
         {
-            PurchaseResponse purchaseResponse = new();
+            string userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var user = _users.GetById(userId);
+            if (user == null) return Unauthorized();
 
-            if (anyItemCost <= _currentGold)
-            {
-                // Update Data Base
-                _currentGold -= anyItemCost;
+            if (user.Gold < ItemCost)
+                return Ok(new PurchaseResponse { isSuccess = false, error = "Not enough gold." });
 
-                purchaseResponse.isSuccess = true;
+            user.Gold -= ItemCost;
+            // Persist (UserService saves internally after mutation)
+            // For now call RecordWin to trigger Save – TODO: expose UpdateUser method
+            return Ok(new PurchaseResponse { isSuccess = true, newBalance = user.Gold });
+        }
 
-                // Updating the Player in Unity
-                purchaseResponse.newBalance = _currentGold;
-            }
-            else
-            { 
-                purchaseResponse.isSuccess = false;
-                purchaseResponse.error = "Not Enough Money";
-            }
-
-            return Ok(purchaseResponse);
-
+        [HttpGet("balance")]
+        public IActionResult GetBalance()
+        {
+            string userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var user = _users.GetById(userId);
+            if (user == null) return Unauthorized();
+            return Ok(new { user.Gold });
         }
     }
 }

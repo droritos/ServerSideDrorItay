@@ -5,24 +5,26 @@ namespace Data
 {
     public static class GlobalData
     {
-        public const string GET = "GET";
-        public const string POST = "POST";
+        public const string GET    = "GET";
+        public const string POST   = "POST";
         public const string DELETE = "DELETE";
-        public const string PUT = "PUT";
+        public const string PUT    = "PUT";
     }
+
     public struct ApiResult<T>
     {
-        public T Data;
-        public bool IsSuccess;
+        public T      Data;
+        public bool   IsSuccess;
         public string Error;
     }
+
     [System.Serializable]
     public class NetworkMessage
     {
-        public string Type ;
-        public string Data ;
-
+        public string Type;
+        public string Data;
     }
+
     [System.Serializable]
     public class AuthRequest
     {
@@ -36,72 +38,60 @@ namespace Data
         public string token;
         public string message;
     }
+
+    [System.Serializable]
     public struct PlayerProfile
     {
-        public string username;   // Must match the server's JSON key (case-sensitive!)
-        public int level;
-        public int xp;
-    }
-    public struct InfoPopupArgs
-    {
-        public string Text;
-        public InfoPopupType Type;
-    }
-    
-    public struct PurchaseRequest
-    {
-        public int itemID;
+        public string username;
+        public int    level;
+        public int    xp;
     }
 
+    public struct InfoPopupArgs
+    {
+        public string       Text;
+        public InfoPopupType Type;
+    }
+
+    [System.Serializable]
+    public struct PurchaseRequest  { public int    itemID;     }
+
+    [System.Serializable]
     public struct PurchaseResponse
     {
-        public bool isSuccess;
+        public bool   isSuccess;
         public string error;
-        public int newBalance;
+        public int    newBalance;
     }
-    
+
     [System.Serializable]
     public struct MatchResult
     {
-        public string username ;
-        public int score;
+        public string username;
+        public int    score;
     }
-    
+
     [System.Serializable]
     public struct LeaderboardResponse
     {
-        // Unity needs the list to be inside a variable, not the root
         public List<MatchResult> list;
     }
-    
+
     [System.Serializable]
-    public struct SubmitResponse
+    public struct SubmitResponse { public bool success; }
+
+    // ── Enums ─────────────────────────────────────────────────
+
+    public enum InfoPopupType    { Log, Warning, Error }
+    public enum AuthenticationType { Login, Register }
+
+    public enum ServiceEventType
     {
-        public bool success;
-    }
-    
-    #region << Global Enums>>
-    public enum InfoPopupType
-    {
-        Log,
-        Warning,
-        Error
-    }
-    
-    public enum AuthenticationType
-    {
+        Connect,
+        Disconnect,
         Login,
         Register,
+        StartGameMatch,
+        EndGameMatch
     }
-    public enum ServiceEventType 
-    {
-      Connect, 
-      Disconnect, 
-      Login, 
-      Register,
-      StartGameMatch,
-      EndGameMatch
-    }
-    
-    #endregion
 }
