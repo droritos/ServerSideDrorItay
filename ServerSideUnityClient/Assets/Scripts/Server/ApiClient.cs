@@ -11,7 +11,7 @@ using UnityEngine.Networking;
 /// </summary>
 public class ApiClient : MonoBehaviour
 {
-    [SerializeField] private string baseUrl = "http://localhost:5235";
+    [SerializeField] private string baseUrl = "http://127.0.0.1:5235";
 
     private string _authToken = string.Empty;
 

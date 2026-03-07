@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.IdentityModel.Tokens;
 using ServerOfGame.Server.Models;
 using ServerOfGame.Server.Services;
 using System.Collections.Concurrent;
+using System.IdentityModel.Tokens.Jwt;
 using System.Net.WebSockets;
 using System.Security.Claims;
 using System.Text;
@@ -14,11 +16,13 @@ namespace ServerOfGame.Server.Controllers
     {
         public static readonly ConcurrentDictionary<WebSocket, PlayerSession> _connectedClients = new();
 
-        private readonly UserService _userService;
+        private readonly UserService    _userService;
+        private readonly IConfiguration _config;
 
-        public WebSocketController(UserService userService)
+        public WebSocketController(UserService userService, IConfiguration config)
         {
             _userService = userService;
+            _config      = config;
         }
 
         [Route("/ws")]
@@ -37,9 +41,16 @@ namespace ServerOfGame.Server.Controllers
                 return;
             }
 
-            // Get user identity from JWT claims
-            string userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
-            string username = User.FindFirstValue(ClaimTypes.Name) ?? "Unknown";
+            // Manually validate JWT (endpoint has no [Authorize] so we do it ourselves)
+            ClaimsPrincipal? principal = ValidateToken(token);
+            if (principal == null)
+            {
+                HttpContext.Response.StatusCode = 401;
+                return;
+            }
+
+            string userId   = principal.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+            string username = principal.FindFirstValue(ClaimTypes.Name) ?? "Unknown";
 
             var user = _userService.GetById(userId);
             if (user == null || user.IsBanned)
@@ -48,13 +59,13 @@ namespace ServerOfGame.Server.Controllers
                 return;
             }
 
-            var socket = await HttpContext.WebSockets.AcceptWebSocketAsync();
+            var socket  = await HttpContext.WebSockets.AcceptWebSocketAsync();
             var session = new PlayerSession
             {
-                UserId = userId,
-                Username = username,
+                UserId      = userId,
+                Username    = username,
                 CurrentRoom = "Lobby",
-                MySocket = socket
+                MySocket    = socket
             };
 
             _connectedClients.TryAdd(socket, session);
@@ -64,6 +75,30 @@ namespace ServerOfGame.Server.Controllers
             await Send(socket, new NetworkMessage { Type = "Chat", Data = $"Welcome, {username}!" });
 
             await ListenLoop(socket, session);
+        }
+
+        private ClaimsPrincipal? ValidateToken(string token)
+        {
+            try
+            {
+                var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));
+                var handler = new JwtSecurityTokenHandler();
+                var parameters = new TokenValidationParameters
+                {
+                    ValidateIssuer           = true,
+                    ValidateAudience         = true,
+                    ValidateLifetime         = true,
+                    ValidateIssuerSigningKey = true,
+                    ValidIssuer              = _config["Jwt:Issuer"],
+                    ValidAudience            = _config["Jwt:Audience"],
+                    IssuerSigningKey         = key
+                };
+                return handler.ValidateToken(token, parameters, out _);
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         private async Task ListenLoop(WebSocket socket, PlayerSession session)

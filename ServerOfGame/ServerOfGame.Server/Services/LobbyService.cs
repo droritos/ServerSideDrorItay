@@ -22,37 +22,38 @@ namespace ServerOfGame.Server.Services
             await BroadcastPlayerList(allClients);
         }
 
-        /// <summary>
-        /// For each room, sends the list of players in that room to every member.
-        /// </summary>
-        public async Task BroadcastPlayerList(ConcurrentDictionary<WebSocket, PlayerSession> clients)
+        public async Task BroadcastPlayerList(
+            ConcurrentDictionary<WebSocket, PlayerSession> clients)
         {
             var rooms = clients.Values.GroupBy(s => s.CurrentRoom);
 
-            foreach (var roomGroup in rooms)
+            foreach (var room in rooms)
             {
-                var playerNames = roomGroup.Select(s => s.Username).ToList();
-                string dataJson = JsonSerializer.Serialize(playerNames);
-                var msg    = new NetworkMessage { Type = "PlayerList", Data = dataJson };
-                byte[] buf = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(msg));
+                var players = room.Select(s => s.Username).ToList();
+                string data = JsonSerializer.Serialize(players);
+                var msg  = new NetworkMessage { Type = "PlayerList", Data = data };
+                byte[] bytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(msg));
 
-                foreach (var p in roomGroup)
+                foreach (var player in room)
                 {
-                    if (p.MySocket?.State == WebSocketState.Open)
-                        await p.MySocket.SendAsync(buf, WebSocketMessageType.Text, true, CancellationToken.None);
+                    if (player.MySocket?.State == WebSocketState.Open)
+                        await player.MySocket.SendAsync(
+                            bytes, WebSocketMessageType.Text, true, CancellationToken.None);
                 }
             }
         }
 
         public async Task SendMatchNotification(
             PlayerSession player,
-            PlayerSession opponent,
+            string opponentName,
             string roomId)
         {
-            var msg = new NetworkMessage { Type = "MatchFound", Data = opponent.Username };
+            var msg  = new NetworkMessage { Type = "MatchFound", Data = opponentName };
             byte[] buf = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(msg));
+
             if (player.MySocket?.State == WebSocketState.Open)
-                await player.MySocket.SendAsync(buf, WebSocketMessageType.Text, true, CancellationToken.None);
+                await player.MySocket.SendAsync(
+                    buf, WebSocketMessageType.Text, true, CancellationToken.None);
         }
     }
 }

@@ -1,68 +1,8 @@
 [
   {
-    "Id": "75a1616b-5c28-4a3a-a55c-5ecd988299a8",
-    "Username": "a",
-    "PasswordHash": null,
-    "IsBanned": false,
-    "BanReason": null,
-    "Wins": 0,
-    "GamesPlayed": 0,
-    "Gold": 0
-  },
-  {
-    "Id": "e174be03-d609-487e-91a9-937f08ac81e6",
-    "Username": "tttt",
-    "PasswordHash": null,
-    "IsBanned": false,
-    "BanReason": null,
-    "Wins": 0,
-    "GamesPlayed": 0,
-    "Gold": 0
-  },
-  {
-    "Id": "c7d27a2a-8de3-4ae5-93ee-3cc3d0806bde",
-    "Username": "ta",
-    "PasswordHash": null,
-    "IsBanned": false,
-    "BanReason": null,
-    "Wins": 0,
-    "GamesPlayed": 0,
-    "Gold": 0
-  },
-  {
-    "Id": "0e61b01b-f0ca-417e-b7ec-90827ca4262d",
-    "Username": "aa",
-    "PasswordHash": null,
-    "IsBanned": false,
-    "BanReason": null,
-    "Wins": 0,
-    "GamesPlayed": 0,
-    "Gold": 0
-  },
-  {
-    "Id": "fccec6d2-3fc6-457f-82ff-92f9a0fae19c",
-    "Username": "b",
-    "PasswordHash": null,
-    "IsBanned": false,
-    "BanReason": null,
-    "Wins": 0,
-    "GamesPlayed": 0,
-    "Gold": 0
-  },
-  {
-    "Id": "3a655e2a-5ca2-4a5e-b747-5b6e6b298b86",
-    "Username": "t",
-    "PasswordHash": null,
-    "IsBanned": false,
-    "BanReason": null,
-    "Wins": 0,
-    "GamesPlayed": 0,
-    "Gold": 0
-  },
-  {
-    "Id": "52cfbc5f-f7a1-43d5-bfa0-c50f65f1c29d",
+    "Id": "ee378a83-fd90-4328-a73b-a43abae5fc91",
     "Username": "itay",
-    "PasswordHash": "$2a$11$JKsTNHCnojTx.z4LQzHAQuyp6gzAf4H5SvZgEPNU03NwNc6gcuG2i",
+    "PasswordHash": "$2a$11$P22QSc.rZjLuB.hySEuQOuw8/iNXR8dhcln2RjqbOykoI50UFjhk6",
     "IsBanned": false,
     "BanReason": "",
     "Wins": 0,

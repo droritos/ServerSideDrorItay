@@ -11,12 +11,7 @@ namespace ServerOfGame.Server.Services
         private readonly List<PlayerSession> _queue = new();
         private readonly object _lock = new();
 
-        public event Action<PlayerSession, PlayerSession, string>? OnMatchCreated;
-
-        private MatchmakingService()
-        {
-            OnMatchCreated += HandleMatchCreated;
-        }
+        private MatchmakingService() { }
 
         public void AddToQueue(PlayerSession session)
         {
@@ -24,14 +19,18 @@ namespace ServerOfGame.Server.Services
             {
                 if (_queue.Contains(session)) return;
                 _queue.Add(session);
-                Console.WriteLine($"[Matchmaking] {session.Username} queued. Size: {_queue.Count}");
+                Console.WriteLine($"[Matchmaking] {session.Username} joined queue. Size: {_queue.Count}");
                 CheckForMatch();
             }
         }
 
         public void RemoveFromQueue(PlayerSession session)
         {
-            lock (_lock) { _queue.Remove(session); }
+            lock (_lock)
+            {
+                if (_queue.Remove(session))
+                    Console.WriteLine($"[Matchmaking] {session.Username} removed from queue.");
+            }
         }
 
         private void CheckForMatch()
@@ -46,14 +45,15 @@ namespace ServerOfGame.Server.Services
             p1.CurrentRoom = roomId;
             p2.CurrentRoom = roomId;
 
-            OnMatchCreated?.Invoke(p1, p2, roomId);
-            Console.WriteLine($"[Matchmaking] Matched {p1.Username} vs {p2.Username} in {roomId}");
+            Console.WriteLine($"[Matchmaking] {p1.Username} vs {p2.Username} in {roomId}");
+
+            _ = NotifyMatch(p1, p2, roomId);
         }
 
-        private async void HandleMatchCreated(PlayerSession p1, PlayerSession p2, string roomId)
+        private async Task NotifyMatch(PlayerSession p1, PlayerSession p2, string roomId)
         {
-            await LobbyService.Instance.SendMatchNotification(p1, p2, roomId);
-            await LobbyService.Instance.SendMatchNotification(p2, p1, roomId);
+            await LobbyService.Instance.SendMatchNotification(p1, p2.Username, roomId);
+            await LobbyService.Instance.SendMatchNotification(p2, p1.Username, roomId);
             await LobbyService.Instance.BroadcastPlayerList(WebSocketController._connectedClients);
         }
     }

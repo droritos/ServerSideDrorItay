@@ -27,7 +27,7 @@ namespace Server
         [SerializeField] private GUIChannel      guiChannel;
 
         private ClientWebSocket _socket;
-        private const string WS_URL = "ws://localhost:5235/ws";
+        private const string WS_URL = "ws://127.0.0.1:5235/ws";
 
         private void Start()
         {
