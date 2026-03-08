@@ -13,7 +13,7 @@ namespace ServerOfGame.Server.Controllers
             {
                 Status = "Online",
                 Message = "Welcome to the Game Server!",
-                ActiveProjectiles = 0 // We can hook this up to real data later!
+                ActiveProjectiles = 0 
             });
         }
     }

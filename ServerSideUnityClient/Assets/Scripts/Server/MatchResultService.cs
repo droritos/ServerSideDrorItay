@@ -12,33 +12,27 @@ namespace Server
         [SerializeField] private ApiClient apiClient;
         [SerializeField] private ServicesChannel servicesChannel;
         [SerializeField] private GUIChannel guiChannel;
-        
-        private const string sumbitEndPoint = "/api/match/submit";
+
+        private const string submitEndPoint      = "/api/match/submit";
         private const string leaderboardEndPoint = "/api/match/leaderboard";
 
         private void Start()
         {
-            // Subscribe to the end of the match event
             servicesChannel.Subscribe(ServiceEventType.EndGameMatch, HandleEndGameEvent);
-            servicesChannel.Subscribe(ServiceEventType.Connect, GetLeaderboardAsyncVoid);
+            servicesChannel.Subscribe(ServiceEventType.Connect,      GetLeaderboardAsyncVoid);
         }
 
         private void OnDestroy()
         {
             servicesChannel.Unsubscribe(ServiceEventType.EndGameMatch, HandleEndGameEvent);
-            servicesChannel.Unsubscribe(ServiceEventType.Connect, GetLeaderboardAsyncVoid);
+            servicesChannel.Unsubscribe(ServiceEventType.Connect,      GetLeaderboardAsyncVoid);
         }
 
-        private async void HandleEndGameEvent(string scoreAsString)
+        // Called when match ends — data is the winner's username, not a score
+        // We just refresh the leaderboard, no need to submit here
+        private async void HandleEndGameEvent(string data)
         {
-            if (int.TryParse(scoreAsString, out int finalScore))
-            {
-                // Now we call our async REST method to save the score!
-                await SubmitMatchAsync(finalScore);
-        
-                // Refresh leaderboard to see our new rank!
-                await GetLeaderboardAsync();
-            }
+            await GetLeaderboardAsync();
         }
 
         private async void GetLeaderboardAsyncVoid()
@@ -46,59 +40,58 @@ namespace Server
             await GetLeaderboardAsync();
         }
 
-
         public async Task SubmitMatchAsync(int score)
         {
-            // Get the username from your AuthService or a GlobalData class
-            string currentUsername = PlayerPrefs.GetString("LastUsername", "Unknown"); 
+            string currentUsername = PlayerPrefs.GetString("LastUsername", "Unknown");
 
-            MatchResult result = new MatchResult()
-            {
-                username = currentUsername, // Now the server knows WHO scored
-                score = score,
-            };
+            // Build the request body manually as JSON string
+            // because JsonUtility handles simple key-value pairs reliably
+            string json = $"{{\"username\":\"{currentUsername}\",\"score\":{score}}}";
 
             Debug.Log("<color=yellow>Submitting match results...</color>");
-            
-            // Using our new async SendRequest
-            var apiResult = await apiClient.SendRequestAsync<SubmitResponse>(sumbitEndPoint, GlobalData.POST, result);
+
+            var apiResult = await apiClient.SendRequestRawAsync<SubmitResponse>(submitEndPoint, GlobalData.POST, json);
 
             if (apiResult.IsSuccess && apiResult.Data.success)
-            {
                 Debug.Log("<color=green>Match Submitted Successfully!</color>");
-            }
             else
-            {
                 Debug.LogError($"<color=red>Submit Failed:</color> {apiResult.Error}");
-            }
         }
 
         public async Task GetLeaderboardAsync()
         {
             Debug.Log("<color=cyan>Fetching Leaderboard...</color>");
-            
-            var result = await apiClient.SendRequestAsync<LeaderboardResponse>(leaderboardEndPoint, GlobalData.GET, null);
 
-            if (result.IsSuccess)
+            // Fetch raw JSON string so we can parse it ourselves
+            var result = await apiClient.SendRequestAsync<string>(leaderboardEndPoint, GlobalData.GET, null);
+
+            if (!result.IsSuccess)
             {
-                if (result.Data.list == null)
+                Debug.LogError($"Leaderboard Error: {result.Error}");
+                return;
+            }
+
+            // Parse manually — JsonUtility struggles with nested lists
+            // Server returns: {"list":[{"username":"itay","score":5}]}
+            try
+            {
+                LeaderboardResponse parsed = JsonUtility.FromJson<LeaderboardResponse>(result.Data);
+
+                if (parsed.list == null || parsed.list.Count == 0)
                 {
                     Debug.LogWarning("Leaderboard is empty.");
                     return;
                 }
-    
-                Debug.Log("--- LEADERBOARD ---");
-                foreach (MatchResult entry in result.Data.list)
-                {
-                    // 👇 Print the name AND the score
-                    Debug.Log($"<color=cyan>{entry.username}: {entry.score}</color>");
-                }
 
-                guiChannel.RaiseLeaderboardChanged(result.Data.list);
+                Debug.Log("--- LEADERBOARD ---");
+                foreach (MatchResult entry in parsed.list)
+                    Debug.Log($"<color=cyan>{entry.username}: {entry.score}</color>");
+
+                guiChannel.RaiseLeaderboardChanged(parsed.list);
             }
-            else
+            catch (Exception e)
             {
-                Debug.LogError($"Leaderboard Error: {result.Error}");
+                Debug.LogError($"Leaderboard parse error: {e.Message}\nRaw: {result.Data}");
             }
         }
     }

@@ -27,11 +27,11 @@ namespace ServerOfGame.Server.Controllers
 
             user.Gold -= ItemCost;
             // Persist (UserService saves internally after mutation)
-            // For now call RecordWin to trigger Save – TODO: expose UpdateUser method
+          
             return Ok(new PurchaseResponse { isSuccess = true, newBalance = user.Gold });
         }
 
-        [HttpGet("balance")]
+        [HttpGet("balance")] //Moneyyy
         public IActionResult GetBalance()
         {
             string userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;

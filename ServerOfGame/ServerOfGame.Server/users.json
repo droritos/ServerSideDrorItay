@@ -5,8 +5,18 @@
     "PasswordHash": "$2a$11$P22QSc.rZjLuB.hySEuQOuw8/iNXR8dhcln2RjqbOykoI50UFjhk6",
     "IsBanned": false,
     "BanReason": "",
-    "Wins": 0,
-    "GamesPlayed": 0,
+    "Wins": 4,
+    "GamesPlayed": 6,
+    "Gold": 500
+  },
+  {
+    "Id": "09d4acfc-6fe3-4121-8cca-caef56ff88d8",
+    "Username": "dror",
+    "PasswordHash": "$2a$11$6Esp4i9puAzwT0M8qdlP7eKVkDP0AW2jVpc9chWqfjlL58GC8RW1i",
+    "IsBanned": false,
+    "BanReason": "",
+    "Wins": 2,
+    "GamesPlayed": 6,
     "Gold": 500
   }
 ]
